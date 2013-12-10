@@ -1,3 +1,4 @@
+from __future__ import division
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servos(object):
@@ -12,3 +13,12 @@ class Servos(object):
 
 	def setTibiaAxis(self, value):
 		self.pwm.setPWM(self.tibiaaxis, 0, value)
+
+	def convAngleToPWM(self, pwm):
+                return 0.0022*pwm**2-2.416*pwm+500.42
+
+        def setFemurToAngle(self, value):
+                self.setFemurAxis(self.convAngleToPWM(value))
+
+        def setTibiaToAngle(self, value):
+                self.setTibiaAxis(self.convAngleToPWM(value))
