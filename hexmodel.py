@@ -22,7 +22,7 @@ class HexModel(object):
     def getFemurAxis(self):
         return self.femurAxisValue
 
-    def setFemurToAngle(self, value)
+    def setFemurToAngle(self, value):
         self.servos.setFemurToAngle(value)
         
     def setTibiaAxis(self, value):
