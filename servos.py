@@ -18,7 +18,7 @@ class Servos(object):
                 return 0.0022*pwm**2-2.416*pwm+500.42
 
         def setFemurToAngle(self, value):
-                self.setFemurAxis(self.convAngleToPWM(value))
+                self.setFemurAxis(int(self.convAngleToPWM(value)))
 
         def setTibiaToAngle(self, value):
-                self.setTibiaAxis(self.convAngleToPWM(value))
+                self.setTibiaAxis(int(self.convAngleToPWM(value)))
