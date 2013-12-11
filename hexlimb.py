@@ -4,13 +4,23 @@ import servo
 
 class HexLimb(object):
     def __init__(self, I2C_ADDRESS, femurLength, tibiaLength, femurInv, tibiaInv):
-        self.femur.servo = servo.Servo(I2C_ADDRESS)
-        self.tibia.servo = servo.Servo(I2C_ADDRESS)
+        self.femur.servo = servo.Servo(I2C_ADDRESS, 1)
+        self.tibia.servo = servo.Servo(I2C_ADDRESS, 2)
         self.femur.length=femurLength
         self.tibia.length=tibiaLength
-        #Starting Position 
-        self.setFemurAngle(90)
-        self.setTibiaAngle(90)
+        if femurInv:
+            self.femur.rev=-1
+        else:
+            self.femur.rev=1
+
+        if tibiaInv:
+            self.tibia.rev=-1
+        else:
+            self.tibia.rev=1
+
+        #Positions Limb in Starting Position 
+        self.setFemurAngle(180)
+        self.setTibiaAngle(0)
        
         self.servoCalibration = None
         self.transform = None
@@ -22,6 +32,7 @@ class HexLimb(object):
             self.femur.angle = self.femur.servo.angle
 
     def incFemurAngle(self, value):
+        value=value*self.femur.rev
         self.setFemurAngle(self.femur.angle+value)
 
     def getFemurAngle(self):
@@ -32,6 +43,7 @@ class HexLimb(object):
             self.tibia.angle = self.tibia.servo.angle
 
     def incTibiaAngle(self, value):
+        value=value*self.tibia.rev
         self.setTibiaAngle(self.tibia.angle+value)
 
     def getTibiaAngle(self):
