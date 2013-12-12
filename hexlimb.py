@@ -1,11 +1,12 @@
 import json
 ##import numpy as np
 import servo
+import ik
 
 class HexLimb(object):
     def __init__(self, I2C_ADDRESS, femurLength, tibiaLength, femurInv, tibiaInv):
-        self.femur.servo = servo.Servo(I2C_ADDRESS, 1)
-        self.tibia.servo = servo.Servo(I2C_ADDRESS, 2)
+        self.femur = servo.Servo(I2C_ADDRESS, 1)
+        self.tibia = servo.Servo(I2C_ADDRESS, 2)
         self.femur.length=femurLength
         self.tibia.length=tibiaLength
         if femurInv:
@@ -19,8 +20,8 @@ class HexLimb(object):
             self.tibia.rev=1
 
         #Positions Limb in Starting Position 
-        self.setFemurAngle(180)
-        self.setTibiaAngle(0)
+        self.setFemurAngle(45)
+        self.setTibiaAngle(130)
        
         self.servoCalibration = None
         self.transform = None
@@ -28,8 +29,8 @@ class HexLimb(object):
         self._loadCalibration()
 
     def setFemurAngle(self, value):
-        if (self.femur.servo.setServoAngle(value)):
-            self.femur.angle = self.femur.servo.angle
+        if (self.femur.setServoAngle(value)):
+            self.femur.angle = self.femur.angle
 
     def incFemurAngle(self, value):
         value=value*self.femur.rev
@@ -39,8 +40,8 @@ class HexLimb(object):
         return self.femur.angle
         
     def setTibiaAngle(self, value):
-        if (self.tibia.servo.setServoAngle(value)):
-            self.tibia.angle = self.tibia.servo.angle
+        if (self.tibia.setServoAngle(value)):
+            self.tibia.angle = self.tibia.angle
 
     def incTibiaAngle(self, value):
         value=value*self.tibia.rev
@@ -70,3 +71,16 @@ class HexLimb(object):
         with open(self.calibrationFile, 'w') as file:
             file.write(json.dumps({'servoCalibration': self.servoCalibration }))
 
+    def moveTipTo(self, x, y):
+	i=0
+	while i<300:
+		length1=self.femur.length
+		length2=self.tibia.length
+		alpha1=90-self.femur.angle
+		alpha2=180-self.tibia.angle
+		(deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
+		#print("FemurInc ", deltaFemur)
+		#print("TibiaInc", deltaTibia)
+		self.incFemurAngle(deltaFemur)
+		self.incTibiaAngle(deltaTibia)
+		i+=1
