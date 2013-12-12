@@ -1,7 +1,6 @@
 import math
 
 def ik2DOFJacobian(Length1, Length2, alpha1, alpha2, oriX, oriY,  x, y):
-    maxIterations=300
     L1=Length1
     L2=Length2
     x=float(x)
