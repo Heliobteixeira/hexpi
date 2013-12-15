@@ -13,7 +13,7 @@ class Servo(object):
                 self.angle = None
 
         def _checkServoPWM(self, value):
-                if value>self.pwm_min & value<self.pwm_max:
+                if value>=self.pwm_min and value<=self.pwm_max:
                         return True
                 else:
                         return False
@@ -26,7 +26,7 @@ class Servo(object):
                         return False
 
         def _setServoPWM(self, value):
-                if checkServoPWM(value):
+                if self._checkServoPWM(value):
                         self._pwm.setPWM(self.channel, 0, value)
                         self._actualpwm=value
                         return True
