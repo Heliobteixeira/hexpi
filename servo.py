@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 from Adafruit_PWM_Servo_Driver import PWM
 
@@ -11,8 +12,21 @@ class Servo(object):
                 self.channel = channel
                 self.angle = None
 
-        def _setServoPWM(self, value):
+        def _checkServoPWM(self, value):
                 if value>self.pwm_min & value<self.pwm_max:
+                        return True
+                else:
+                        return False
+
+        def checkServoAngle(self, angle):
+                pwmvalue=self._convAngleToPWM(angle)
+                if self._checkServoPWM(pwmvalue):
+                        return True
+                else:
+                        return False
+
+        def _setServoPWM(self, value):
+                if checkServoPWM(value):
                         self._pwm.setPWM(self.channel, 0, value)
                         self._actualpwm=value
                         return True
