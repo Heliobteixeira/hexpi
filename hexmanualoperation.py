@@ -1,6 +1,7 @@
 import sys
 import curses
 import hexlimb
+from time import sleep
 
 def updDisplay(x, y, xf, yf):
     screen.addstr(0,3,str(x)+'  ')
@@ -24,15 +25,29 @@ screen.keypad(True)
 screen.addstr(0,0, 'X:')
 screen.addstr(1,0, 'Y:')
 
-pata=hexlimb.HexLimb(0x40, 70, 120, True, True)
+pata=hexlimb.HexLimb(0x40, 70, 125, True, True)
 updDisplay(pata.x, pata.y, 0, 0)
 
-inc=10
+inc=40
 try:
     while True:
         char = screen.getch()
         if char == ord('q'): 
             break
+        elif char == ord('s'):
+            i=0
+            while i<10:
+                xf=120
+                yf=0
+                pata.moveTipTo(xf, yf)
+                updDisplay(pata.x, pata.y, xf, yf)
+                sleep(1)
+                xf=190
+                yf=0                
+                pata.moveTipTo(xf, yf)
+                updDisplay(pata.x, pata.y, xf, yf)
+                sleep(1)              
+                i+=1
         elif char == curses.KEY_RIGHT:
             # print doesn't work with curses, use addstr instead
             xf=pata.x+inc
