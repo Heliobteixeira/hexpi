@@ -6,32 +6,21 @@ import ik
 import math
 
 class HexLimb(object):
+    ##Reformular com base nas alteracoes da classe Servo
     def __init__(self, I2C_ADDRESS, femurLength, tibiaLength, femurInv, tibiaInv):
-        #Setting precision
+        #Setting precision of Limb Positioning
         self.precision=1
         
         #Setting i2c address and servo channels
-        self.femur = servo.Servo(I2C_ADDRESS, 1)
-        self.tibia = servo.Servo(I2C_ADDRESS, 2)
+        self.femur = servo.Servo(I2C_ADDRESS, 1, femurInv)
+        self.tibia = servo.Servo(I2C_ADDRESS, 2, tibiaInv)
         #Setting limb's lengths
         self.femur.length=femurLength
         self.tibia.length=tibiaLength
+        
         #Setting min/max angles
-        self.setMinFemurAngle(5)
-        self.setMaxFemurAngle(190)
-        self.setMinTibiaAngle(5)
-        self.setMaxTibiaAngle(190)
-        #Setting reversed joints
-        if femurInv:
-            self.femur.rev=-1
-        else:
-            self.femur.rev=1
-
-        if tibiaInv:
-            self.tibia.rev=-1
-        else:
-            self.tibia.rev=1
-
+        #
+        #
 
         #Loading servo calibration values
         self.servoCalibration = None

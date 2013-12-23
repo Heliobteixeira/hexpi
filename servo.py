@@ -3,7 +3,7 @@ from __future__ import division
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
-        def __init__(self, i2cAddress, channel, reversed=False):
+        def __init__(self, i2cAddress, channel, minAngle=5, maxAngle=190, reversed=False):
                 self._pwm=PWM(i2cAddress, debug=True)
                 self._pwm.setPWMFreq(50)
                 self.pwm_min=90
@@ -12,7 +12,7 @@ class Servo(object):
                 self.channel = channel
                 self.angle = None
                 self.reversed=reversed
-                if not (self.setMinAngle(5) and self.setMaxAngle(190)):
+                if not (self.setMinAngle(minAngle) and self.setMaxAngle(maxAngle)):
                     sys.exit('Error initializing servo on channel #'+channel+'. Unable to set min/max values')
 
         def _isPWMValid(self, value):
