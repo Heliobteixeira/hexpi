@@ -22,10 +22,11 @@ class HexLimb(object):
         self._loadCalibration()
 
         #Reset servo positions after servo calibration
-        self.refresh
+        self.updatePositions()
+        self.calcPosition()
 
     def setFemurAngle(self, angle):
-        return self.tibia.setAngle(angle)
+        return self.femur.setAngle(angle)
 
     def checkFemurBend(self, bendangle):
         return self.femur.checkIncAngle(bendangle)
@@ -33,7 +34,10 @@ class HexLimb(object):
     def bendFemur(self, angle):
         return self.femur.incAngle(angle)
 
-    def getFemurAngle(self):
+    def getAbsFemurAngle(self):
+        return self.femur.angle
+
+    def getNorFemurAngle(self):
         return 90-self.femur.angle
         
     def setTibiaAngle(self, angle):
@@ -45,13 +49,16 @@ class HexLimb(object):
     def bendTibia(self, angle):
         return self.tibia.incAngle(angle)
 
-    def getTibiaAngle(self):
+    def getAbsTibiaAngle(self):
+        return self.tibia.angle
+
+    def getNorTibiaAngle(self):
         return 180-self.tibia.angle
 
     def calcPosition(self):
-        L1=self.femur.length
-        L2=self.tibia.length
         try:
+            L1=self.femur.length
+            L2=self.tibia.length
             a1=90-self.femur.angle#########!!!!!!
             a2=180-self.tibia.angle
             self.x=L1*math.cos(math.radians(a1))+L2*math.cos(math.radians(a1-a2))
@@ -86,15 +93,25 @@ class HexLimb(object):
         if self.checkFemurBend(femurBendAngle) and self.checkTibiaBend(tibiaBendAngle):
             self.bendFemur(femurBendAngle)
             self.bendTibia(tibiaBendAngle)
+            return True
+        else:
+            return False
 
     def distTo(self, x, y):
         return math.sqrt((x-self.x)**2+(y-self.y)**2)
 
     def moveTipTo(self, x, y):
         i=0
-        while self.distTo(x,y)>self.precision and i<500:
+        lastMoveFine=True
+        while self.distTo(x,y)>self.precision and i<500 and lastMoveFine:
                 length1=self.femur.length
                 length2=self.tibia.length
-                (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, self.getFemurAngle, self.getTibiaAngle, 0, 0, x, y)
-                self.bendLimbJoints(deltaFemur, deltaTibia)
+                alpha1=self.getNorFemurAngle()
+                alpha2=self.getNorTibiaAngle()
+                (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
+                lastMoveFine=self.bendLimbJoints(deltaFemur, deltaTibia)
                 i+=1
+
+    def updatePositions(self):
+        self.setFemurAngle(self.femur.angle)
+        self.setTibiaAngle(self.tibia.angle)

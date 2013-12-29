@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
+import sys
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
@@ -16,9 +17,10 @@ class Servo(object):
                 self.offset = 0
                 self.reversed=reversed
                 self.callback=callback
+
                 
                 if not (self.setMinAngle(minAngle) and self.setMaxAngle(maxAngle)):
-                    sys.exit('Error initializing servo on channel #'+channel+'. Unable to set min/max values')
+                    sys.exit('Error initializing servo on channel #%s. Unable to set min/max values' % channel)
 
         def _isPWMValid(self, value):
                 if value>=self.pwm_min and value<=self.pwm_max:
@@ -28,16 +30,26 @@ class Servo(object):
 
         def _isAngleWithinLimits(self, angle):
                 ##Servo's angle limit can be less than a valid pwm value
+                ##This function limits servo angle amplitude
+
+                ##If min/max angles are not set they assume easy to superate values
+                if not hasattr(self, 'minangle') or self.minangle is None:
+                        self.minangle=-999999
+                if not hasattr(self, 'maxangle') or self.maxangle is None:
+                        self.maxangle=999999
+                        
                 if angle>=self.minangle and angle<=self.maxangle:
                         return True
                 else:
+                        if angle<self.minangle: print('Angle:%sº is lower than defined min. angle:%s' % (angle, self.minangle))
+                        if angle>self.maxangle: print('Angle:%sº is higher than defined max. angle:%s' % (angle, self.maxangle))
                         return False
 
         def checkServoAngle(self, angle):
                 ##Assumes not for start
                 result=False
                 pwm=self._convAngleToPWM(angle)
-                if _isAngleWithinLimits(angle) and _isPWMValid(pwm):
+                if self._isAngleWithinLimits(angle) and self._isPWMValid(pwm):
                         result=True
                 return result
 
@@ -53,7 +65,7 @@ class Servo(object):
                         self.minangle=angle
                         return True
                 else:
-                        print('Impossible to set Min angle of channel #'+self.channel+' to '+angle+'º!')
+                        print('Impossible to set Min angle of channel #%s to %sº!' % (self.channel, angle))
                         return False
                 
         def setMaxAngle(self, angle):
@@ -61,10 +73,10 @@ class Servo(object):
                         self.maxangle=angle
                         return True
                 else:
-                        print('Impossible to set Max angle of channel #'+self.channel+' to '+angle+'º!')
+                        print('Impossible to set Max angle of channel #%s to %sº!' % (self.channel, angle))
                         return False
 
-        def calcAngleFromInc(self, angle):
+        def calcAngleFromInc(self, angleInc):
                 if self.reversed:
                         angleInc=angleInc*-1
                 return self.angle+angleInc
@@ -97,12 +109,12 @@ class Servo(object):
                 else:
                         pwmvalue=self._convAngleToPWM(offsetAngle)
                         self._setPWM(pwmvalue)
-                        self.angle=value
-                        if self.callback is not None: self.callback
+                        self.angle=angle #Sets the original non offseted angle
+                        if self.callback is not None: self.callback()
                         return True
 
         def incAngle(self, angleInc):
-                return self.setServoAngle(self.calcAngleFromInc(angleInc))
+                return self.setAngle(self.calcAngleFromInc(angleInc))
         
         def getAngle(self):
                 return self.angle
