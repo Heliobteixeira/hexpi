@@ -1,7 +1,7 @@
 import json
 import sys
 ##import numpy as np
-import servo
+from hexbone import HexBone
 import ik
 import math
 
@@ -12,94 +12,41 @@ class HexLimb(object):
         self.precision=1
         
         #Setting i2c address and servo channels
-        self.femur = servo.Servo(I2C_ADDRESS, 1, femurInv)
-        self.tibia = servo.Servo(I2C_ADDRESS, 2, tibiaInv)
-        #Setting limb's lengths
-        self.femur.length=femurLength
-        self.tibia.length=tibiaLength
+        self.femur = HexBone(I2C_ADDRESS, 1, femurLength, 45, femurInv, 5, 190, self.calcPosition)
+        self.tibia = HexBone(I2C_ADDRESS, 2, tibiaLength, 90, tibiaInv, 5, 190, self.calcPosition)
         
-        #Setting min/max angles
-        #
-        #
-
         #Loading servo calibration values
         self.servoCalibration = None
         self.transform = None
         self.calibrationFile = 'calibration.json'
         self._loadCalibration()
 
-        #Positions Limb in Starting Position 
-        self.setFemurAngle(45)
-        self.setTibiaAngle(90)
-
-    def setMinFemurAngle(self, angle):
-        if self.femur.checkServoAngle(angle):
-            self.femur.min_angle=angle
-        if not hasattr(self.femur, 'min_angle'):
-            sys.exit('femur minimum angle not defined!')
-            
-        
-    def setMaxFemurAngle(self, angle):
-        if self.femur.checkServoAngle(angle):
-            self.femur.max_angle=angle
-        if not hasattr(self.femur, 'max_angle'):
-            sys.exit('femur maximum angle not defined!')
+        #Reset servo positions after servo calibration
+        self.refresh
 
     def setFemurAngle(self, angle):
-        if (self.femur.setServoAngle(angle)):
-            self.femur.angle = angle
-            self.calcPosition()
-
-    def calcAbsFemurAngleFromInc(self, bendangle):
-        bendangle=bendangle*self.femur.rev
-        return self.femur.angle+bendangle
+        return self.tibia.setAngle(angle)
 
     def checkFemurBend(self, bendangle):
-        absAngle=self.calcAbsFemurAngleFromInc(bendangle)
-        if absAngle>self.femur.min_angle and absAngle<self.femur.max_angle:
-            return True
-        else:
-            return False
+        return self.femur.checkIncAngle(bendangle)
             
     def bendFemur(self, angle):
-        self.setFemurAngle(self.calcAbsFemurAngleFromInc(angle))
+        return self.femur.incAngle(angle)
 
     def getFemurAngle(self):
-        return self.femur.angle
-
-    def setMinTibiaAngle(self, angle):
-        if self.tibia.checkServoAngle(angle):
-            self.tibia.min_angle=angle
-        if not hasattr(self.tibia, 'min_angle'):
-            sys.exit('tibia minimum angle not defined!')
-        
-    def setMaxTibiaAngle(self, angle):
-        if self.tibia.checkServoAngle(angle):
-            self.tibia.max_angle=angle
-        if not hasattr(self.tibia, 'max_angle'):
-            sys.exit('tibia maximum angle not defined!')
+        return 90-self.femur.angle
         
     def setTibiaAngle(self, angle):
-        if (self.tibia.setServoAngle(angle)):
-            self.tibia.angle = angle
-            self.calcPosition()
-            
-    def calcAbsTibiaAngleFromInc(self, bendangle):
-        bendangle=bendangle*self.tibia.rev
-        return self.tibia.angle+bendangle
+        return self.tibia.setAngle(angle)
 
     def checkTibiaBend(self, bendangle):
-        absAngle=self.calcAbsTibiaAngleFromInc(bendangle)
-        if absAngle>self.tibia.min_angle and absAngle<self.tibia.max_angle:
-            return True
-        else:
-            return False
+        return self.tibia.checkIncAngle(bendangle)
 
     def bendTibia(self, angle):
-        self.setTibiaAngle(self.calcAbsTibiaAngleFromInc(angle))
+        return self.tibia.incAngle(angle)
 
     def getTibiaAngle(self):
-        return self.tibia.angle
+        return 180-self.tibia.angle
 
     def calcPosition(self):
         L1=self.femur.length
@@ -148,8 +95,6 @@ class HexLimb(object):
         while self.distTo(x,y)>self.precision and i<500:
                 length1=self.femur.length
                 length2=self.tibia.length
-                alpha1=90-self.femur.angle
-                alpha2=180-self.tibia.angle
-                (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
+                (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, self.getFemurAngle, self.getTibiaAngle, 0, 0, x, y)
                 self.bendLimbJoints(deltaFemur, deltaTibia)
                 i+=1

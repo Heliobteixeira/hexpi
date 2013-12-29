@@ -4,20 +4,15 @@ from servo import Servo
 import math
 
 class HexBone(Servo):
-    ##Aplicar conceito de inheritance...ver como se costuma fazer o init
-    def __init__(self, I2C_ADDRESS, channel, length, minAngle, maxAngle, startAngle, reversed=False):
+    ## Servo.__init__ override:
+    def __init__(self, I2C_ADDRESS, channel, length, startAngle, reversed=False, minAngle=None, maxAngle=None, callback=None):       
+        self = Servo(I2C_ADDRESS, channel, reversed, minAngle, maxAngle, callback)
         
-        #Setting i2c address and servo channels
-        self = servo.Servo(I2C_ADDRESS, 1, minAngle, maxAngle, reversed)
         #Setting limb's lengths
         self.length=length
-
         #Positions Limb in Starting Position 
         self.setAngle(startAngle)
 
-    def getAngle(self):
-        return self.angle
-
-    def refresh(self):
-        self.setAngle(self.angle)
+    def getLength(self):
+        return self.length
 
