@@ -7,13 +7,14 @@ import math
 
 class HexLimb(object):
     ##Reformular com base nas alteracoes da classe Servo
-    def __init__(self, I2C_ADDRESS, femurLength, tibiaLength, femurInv, tibiaInv):
+    def __init__(self, I2C_ADDRESS, femurLength, tibiaLength, hipLength, femurInv, tibiaInv, hipInv):
         #Setting precision of Limb Positioning
         self.precision=1
         
         #Setting i2c address and servo channels
         self.femur = HexBone(I2C_ADDRESS, 1, femurLength, 45, femurInv, 5, 190, self.calcPosition)
         self.tibia = HexBone(I2C_ADDRESS, 2, tibiaLength, 90, tibiaInv, 5, 190, self.calcPosition)
+        self.hip   = HexBone(I2C_ADDRESS, 3, hipLength, 90, hipInv, 5, 190, self.calcPosition)
         
         #Loading servo calibration values
         self.servoCalibration = None
@@ -25,6 +26,7 @@ class HexLimb(object):
         self.updatePositions()
         self.calcPosition()
 
+    ##Code hip movement functions
     def setFemurAngle(self, angle):
         return self.femur.setAngle(angle)
 
