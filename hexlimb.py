@@ -10,26 +10,18 @@ class HexLimb(object):
     ## Hexbone's min/max default angles
     defaultMinAngle=5
     defaultMaxAngle=190
-   
                     
     ##Reformular com base nas alteracoes da classe Servo
-    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revMovArray):
+    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revArray):
         #0->Hip;1->Femur;2->Tibia
         
         #Setting precision of Limb Positioning
         self.precision=1
         
         #Setting i2c address and servo channels
-        self.hip   = HexBone(I2C_ADDRESS, 3, hipLength, 90, hipInv, 5, 190, self.calcPosition)
-        self.femur = HexBone(I2C_ADDRESS, 1, femurLength, 45, femurInv, 5, 190, self.calcPosition)
-        self.tibia = HexBone(I2C_ADDRESS, 2, tibiaLength, 90, tibiaInv, 5, 190, self.calcPosition)
-        
-        
-        #Loading servo calibration values
-        self.servoCalibration = None
-        self.transform = None
-        self.calibrationFile = 'calibration.json'
-        self._loadCalibration()
+        self.hip   = HexBone(I2C_ADDRESS, bonesChannelsArray[0], bonesLengthArray[0], 90, revArray[0], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.femur = HexBone(I2C_ADDRESS, bonesChannelsArray[1], bonesLengthArray[1], 45, revArray[1], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 90, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
 
         #Reset servo positions after servo calibration
         self.updatePositions()
@@ -94,28 +86,7 @@ class HexLimb(object):
         except:
             return False
         else:
-            return True
-
-    def setCalibration(self, targetCalibration, servoCalibration):
-        self.servoCalibration = servoCalibration
-        self._saveCalibration()
-
-    def getCalibration(self):
-        return self.servoCalibration        
-
-    def _loadCalibration(self):
-        """Load calibration data from disk."""
-        try:
-            with open(self.calibrationFile, 'r') as file:
-                cal = json.loads(file.read())
-                self.servoCalibration = cal['servoCalibration']
-        except IOError:
-            pass
-
-    def _saveCalibration(self):
-        """Save calibration data to disk."""
-        with open(self.calibrationFile, 'w') as file:
-            file.write(json.dumps({'servoCalibration': self.servoCalibration }))
+            return True        
 
     def bendLimbJoints(self, femurBendAngle, tibiaBendAngle):
         if self.checkFemurBend(femurBendAngle) and self.checkTibiaBend(tibiaBendAngle):
