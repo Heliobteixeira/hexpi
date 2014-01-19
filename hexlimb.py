@@ -6,15 +6,24 @@ import ik
 import math
 
 class HexLimb(object):
+
+    ## Hexbone's min/max default angles
+    defaultMinAngle=5
+    defaultMaxAngle=190
+   
+                    
     ##Reformular com base nas alteracoes da classe Servo
-    def __init__(self, I2C_ADDRESS, femurLength, tibiaLength, hipLength, femurInv, tibiaInv, hipInv):
+    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revMovArray):
+        #0->Hip;1->Femur;2->Tibia
+        
         #Setting precision of Limb Positioning
         self.precision=1
         
         #Setting i2c address and servo channels
+        self.hip   = HexBone(I2C_ADDRESS, 3, hipLength, 90, hipInv, 5, 190, self.calcPosition)
         self.femur = HexBone(I2C_ADDRESS, 1, femurLength, 45, femurInv, 5, 190, self.calcPosition)
         self.tibia = HexBone(I2C_ADDRESS, 2, tibiaLength, 90, tibiaInv, 5, 190, self.calcPosition)
-        self.hip   = HexBone(I2C_ADDRESS, 3, hipLength, 90, hipInv, 5, 190, self.calcPosition)
+        
         
         #Loading servo calibration values
         self.servoCalibration = None
@@ -41,6 +50,7 @@ class HexLimb(object):
 
     def getNorFemurAngle(self):
         return 90-self.femur.angle
+
         
     def setTibiaAngle(self, angle):
         return self.tibia.setAngle(angle)
@@ -56,6 +66,22 @@ class HexLimb(object):
 
     def getNorTibiaAngle(self):
         return 180-self.tibia.angle
+
+
+    def setHipAngle(self, angle):
+        return self.hip.setAngle(angle)
+
+    def checkHipBend(self, bendangle):
+        return self.hip.checkIncAngle(bendangle)
+            
+    def bendHip(self, angle):
+        return self.hip.incAngle(angle)
+
+    def getAbsHipAngle(self):
+        return self.hip.angle
+
+    def getNorHipAngle(self):
+        return self.femur.angle
 
     def calcPosition(self):
         try:
