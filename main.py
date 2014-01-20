@@ -1,4 +1,4 @@
 import json, sys
-import hexlimb
+import hexmodel
 
-pata=hexlimb.HexLimb(0x40, 70, 120, True, True)
+m=hexmodel.HexModel()

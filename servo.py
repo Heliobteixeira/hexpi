@@ -41,8 +41,8 @@ class Servo(object):
                 if angle>=self.minangle and angle<=self.maxangle:
                         return True
                 else:
-                        if angle<self.minangle: print('Angle:%sº is lower than defined min. angle:%s' % (angle, self.minangle))
-                        if angle>self.maxangle: print('Angle:%sº is higher than defined max. angle:%s' % (angle, self.maxangle))
+                        if angle<self.minangle: print('Angle:%sº is lower than defined min. angle:%s (channel#%s)' % (angle, self.minangle, self.channel))
+                        if angle>self.maxangle: print('Angle:%sº is higher than defined max. angle:%s (channel#%s)' % (angle, self.maxangle, self.channel))
                         return False
 
         def checkServoAngle(self, angle):

@@ -1,23 +1,26 @@
 import json
 import numpy as np
 import time
+import hexlimb
 
 class HexModel(object):
-    def __init__(self, servos, servoMin, servoMax, servoCenter):
-        self.limbs[3]=hexlimb.HexLimb(0x40, [0,1,2], [10,70,120], [1,1,1])
+    def __init__(self):
+        self.limbs={ 3: hexlimb.HexLimb(0x40, [0,1,2], [10,70,120], [1,1,1])
+                    }
         
 ##        self.targetCalibration = None
 ##        self.servoCalibration = None
 ##        self.calibrationFile = 'calibration.json'
 ##        self._loadCalibration()
 
-    def stepLimbIndex(self, limbIndex):
-        self.limbs[limbIndex].bendFemur(30)
-        self.limbs[limbIndex].bendHip(30)
-        time.sleep(2)
-        self.limbs[limbIndex].bendFemur(-30)
-        time.sleep(1)
-        self.limbs[limbIndex].bendHip(-30)        
+    def stepLimbIndex(self, limbIndex, wait=1):
+        self.limbs[limbIndex].bendFemur(60)
+        self.limbs[limbIndex].bendHip(60)
+        time.sleep(wait)
+        self.limbs[limbIndex].bendFemur(-60)
+        time.sleep(wait)
+        self.limbs[limbIndex].bendHip(-60)
+        time.sleep(wait)
         
     def setCalibration(self, targetCalibration, servoCalibration):
 ##        self.targetCalibration = targetCalibration
