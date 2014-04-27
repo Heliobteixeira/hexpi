@@ -4,13 +4,13 @@ import sys
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
-        def __init__(self, i2cAddress, channel, reversed=False, minAngle=5, maxAngle=190, callback=None):
+        def __init__(self, i2cAddress, channel, reversed=False, minAngle=0, maxAngle=180, callback=None):
                 self._pwm=PWM(i2cAddress, debug=True) ##Set debug to False before release
                 self.channel = channel
-                self._pwm.setPWMFreq(50)
+                self._pwm.setPWMFreq(60)
                 
-                self.pwm_min=90
-                self.pwm_max=500
+                self.pwm_min=130
+                self.pwm_max=660
                 self._actualpwm=None
                 
                 self.angle = None
@@ -57,8 +57,9 @@ class Servo(object):
                 self._pwm.setPWM(self.channel, 0, value)
                 self._actualpwm=value
 
-        def _convAngleToPWM(self, pwm):
-                return int(0.0022*pwm**2-2.416*pwm+500.42)
+        def _convAngleToPWM(self, angle):
+#                return int(0.0022*pwm**2-2.416*pwm+500.42)
+                return int(((angle*(self.pwm_max-self.pwm_min))/180)+self.pwm_min)
         
         def setMinAngle(self, angle):
                 if self.checkServoAngle(angle):
