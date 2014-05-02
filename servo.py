@@ -4,7 +4,7 @@ import sys
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
-        def __init__(self, i2cAddress, channel, reversed=False, minAngle=0, maxAngle=180, callback=None):
+        def __init__(self, i2cAddress, channel, reversed=False, minAngle=-90, maxAngle=90, callback=None):
                 self._pwm=PWM(i2cAddress, debug=True) ##Set debug to False before release
                 self.channel = channel
                 self._pwm.setPWMFreq(60)
@@ -14,13 +14,15 @@ class Servo(object):
                 self._actualpwm=None
                 
                 self.angle = None
+                self.angleThrow = 180 #Maximum angle throw of servo end-to-end 
                 self.offset = 0
                 self.reversed=reversed
                 self.callback=callback
 
-                
-                if not (self.setMinAngle(minAngle) and self.setMaxAngle(maxAngle)):
-                    sys.exit('Error initializing servo on channel #%s. Unable to set min/max values' % channel)
+                if (maxAngle-minAngle>self.angleThrow):
+                        sys.exit('Result of maxAngle-minAngle exceeds predefined servo throw of %s' % self.angleThrow)                                            
+                elif not (self.setMinAngle(minAngle) and self.setMaxAngle(maxAngle)):
+                        sys.exit('Error initializing servo on channel #%s. Unable to set min/max values' % channel)
 
         def _isPWMValid(self, value):
                 if value>=self.pwm_min and value<=self.pwm_max:
@@ -59,6 +61,8 @@ class Servo(object):
 
         def _convAngleToPWM(self, angle):
 #                return int(0.0022*pwm**2-2.416*pwm+500.42)
+                absAngle=angle+90
+                servoAngleThrow=180
                 return int(((angle*(self.pwm_max-self.pwm_min))/180)+self.pwm_min)
         
         def setMinAngle(self, angle):
