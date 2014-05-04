@@ -58,7 +58,7 @@ class HexLimb(object):
         return self.tibia.angle
 
     def getNorTibiaAngle(self):
-        return 90-self.tibia.angle
+        return 90+self.tibia.angle
 
 
     def setHipAngle(self, angle):
