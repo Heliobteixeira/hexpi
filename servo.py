@@ -4,13 +4,14 @@ import sys
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
-        def __init__(self, i2cAddress, channel, reversed=False, minAngle=-90, maxAngle=90, callback=None):
+        def __init__(self, i2cAddress, channel, pwm_min, pwm_max, reversed=False, minAngle=-90, maxAngle=90, callback=None):
                 self._pwm=PWM(i2cAddress, debug=True) ##Set debug to False before release
                 self.channel = channel
                 self._pwm.setPWMFreq(60)
+
                 
-                self.pwm_min=130
-                self.pwm_max=660
+                self.pwm_min=pwm_min #pwm_min: HS-485HB->158 HS-645MG->149
+                self.pwm_max=pwm_max #pwm_max: HS-485HB->643 HS-645MG->651
                 self._actualpwm=None
                 
                 self.angle = None
@@ -28,6 +29,7 @@ class Servo(object):
                 if value>=self.pwm_min and value<=self.pwm_max:
                         return True
                 else:
+                        print('PWM=%s is not valid. It is not between min/max pwm values of %s/%s' % (value, self.pwm_min, self.pwm_max))
                         return False
 
         def _isAngleWithinLimits(self, angle):
@@ -58,12 +60,12 @@ class Servo(object):
         def _setPWM(self, value):
                 self._pwm.setPWM(self.channel, 0, value)
                 self._actualpwm=value
+                print('PWM set to: %s' % value)
 
         def _convAngleToPWM(self, angle):
 #                return int(0.0022*pwm**2-2.416*pwm+500.42)
                 absAngle=angle+90
-                servoAngleThrow=180
-                return int(((angle*(self.pwm_max-self.pwm_min))/180)+self.pwm_min)
+                return int(((absAngle*(self.pwm_max-self.pwm_min))/self.angleThrow)+self.pwm_min)
         
         def setMinAngle(self, angle):
                 if self.checkServoAngle(angle):
@@ -82,8 +84,6 @@ class Servo(object):
                         return False
 
         def calcAngleFromInc(self, angleInc):
-                if self.reversed:
-                        angleInc=angleInc*-1
                 return self.angle+angleInc
                 
         def checkIncAngle(self, angleInc):
@@ -108,6 +108,9 @@ class Servo(object):
                 ##Executes order to move servo to specified angle
                 ##Returns False if not possible or True if OK
                 offsetAngle=self.offset+angle
+                if self.reversed:
+                        offsetAngle=-offsetAngle #Reverses angle in case of servo 'reversed'
+                        
                 if not self.checkServoAngle(offsetAngle):
                         #Angle not within servo range
                         return False

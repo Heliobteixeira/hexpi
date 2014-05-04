@@ -20,9 +20,9 @@ class HexLimb(object):
         self.precision=1
         
         #Setting i2c address and servo channels
-        self.hip   = HexBone(I2C_ADDRESS, bonesChannelsArray[0], bonesLengthArray[0], 90, revArray[0], defaultMinAngle, defaultMaxAngle, self.calcPosition)
-        self.femur = HexBone(I2C_ADDRESS, bonesChannelsArray[1], bonesLengthArray[1], 90, revArray[1], defaultMinAngle, defaultMaxAngle, self.calcPosition)
-        self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 90, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.hip   = HexBone(I2C_ADDRESS, bonesChannelsArray[0], bonesLengthArray[0], 0, 158, 643, revArray[0], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.femur = HexBone(I2C_ADDRESS, bonesChannelsArray[1], bonesLengthArray[1], 0, 149, 651, revArray[1], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 0, 158, 643, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
 
         #Reset servo positions after servo calibration
         self.updatePositions()
@@ -42,7 +42,7 @@ class HexLimb(object):
         return self.femur.angle
 
     def getNorFemurAngle(self):
-        return 90-self.femur.angle
+        return self.femur.angle
 
         
     def setTibiaAngle(self, angle):
@@ -77,6 +77,7 @@ class HexLimb(object):
         return self.hip.angle
 
     def calcPosition(self):
+        #Callback function (when setAngle is called) to update tip position
         try:
             L1=self.femur.length
             L2=self.tibia.length
@@ -90,6 +91,7 @@ class HexLimb(object):
             return True        
 
     def bendLimbJoints(self, femurBendAngle, tibiaBendAngle):
+        #Bends Femur and Tibia simultaneously
         if self.checkFemurBend(femurBendAngle) and self.checkTibiaBend(tibiaBendAngle):
             self.bendFemur(femurBendAngle)
             self.bendTibia(tibiaBendAngle)
@@ -118,68 +120,47 @@ class HexLimb(object):
 
 ## Testing Functions:
     def defaultPosition(self):
-        self.setTibiaAngle(90)
-        self.setFemurAngle(90)
-        self.setHipAngle(90)
+        self.setTibiaAngle(0)
+        self.setFemurAngle(0)
+        self.setHipAngle(0)
 
     def doStep(self, wait=1):
         ##Position all Limbs in known position because uses bend instead of setAngle
         ##Change to setAngle!!!
-        femurBendAngle=30
-        tibiaBendAngle=30
-        hipBendAngle=20
+        femurAngle=30
+        tibiaAngle=30
+        hipAngle=20
         self.defaultPosition()
-        self.bendFemur(femurBendAngle)
-        self.bendTibia(-tibiaBendAngle)
-        self.bendHip(hipBendAngle)
+        self.bendFemur(femurAngle)
+        self.bendTibia(-tibiaAngle)
+        self.bendHip(hipAngle)
         sleep(wait)       
-        self.bendFemur(-femurBendAngle)
-        self.bendTibia(tibiaBendAngle)
+        self.bendFemur(-femurAngle)
+        self.bendTibia(tibiaAngle)
         sleep(wait)
-        self.bendHip(-hipBendAngle)
+        self.bendHip(-hipAngle)
         sleep(wait)
 
     def stretchUp(self):
-        ##Position all Limbs in known position because uses bend instead of setAngle
-        ##Change to setAngle!!!
-        femurBendAngle=40
-        tibiaBendAngle=40
-        self.defaultPosition()
-        self.bendFemur(femurBendAngle)
-        self.bendTibia(tibiaBendAngle)
+        self.setFemurAngle(40)
+        self.setTibiaAngle(40)
 
     def stretchDown(self):
-        ##Position all Limbs in known position because uses bend instead of setAngle
-        ##Change to setAngle!!!
-        femurBendAngle=40
-        tibiaBendAngle=50
-        self.defaultPosition()
-        self.bendFemur(-femurBendAngle)
-        self.bendTibia(tibiaBendAngle)
+        self.setFemurAngle(-40)
+        self.setTibiaAngle(50)
 
     def contract(self):
-        ##Position all Limbs in known position because uses bend instead of setAngle
-        ##Change to setAngle!!!
-        femurBendAngle=40
-        tibiaBendAngle=35
-        self.defaultPosition()
-        self.bendFemur(femurBendAngle)
-        self.bendTibia(-tibiaBendAngle)        
+        self.setFemurAngle(40)
+        self.setTibiaAngle(-35)        
 
     def stretchFront(self):
-        ##Position all Limbs in known position because uses bend instead of setAngle
-        ##Change to setAngle!!!
-        self.defaultPosition()
-        self.bendHip(20)
+        self.setHipAngle(20)
         
     def stretchBack(self):
-        ##Position all Limbs in known position because uses bend instead of setAngle
-        ##Change to setAngle!!!
-        self.defaultPosition()
-        self.bendHip(-20)
+        self.setHipAngle(-20)
 
     def lift(self):
-        self.bendFemur(30)
+        self.setFemurAngle(30)
 
     def stepRotatedFront(self, hipAngle):
         ##self.defaultPosition()
