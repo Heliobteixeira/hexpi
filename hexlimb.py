@@ -118,7 +118,7 @@ class HexLimb(object):
                 alpha1=self.getNorFemurAngle()
                 alpha2=self.getNorTibiaAngle()
                 (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
-                lastMoveFine=self.bendLimbJoints(deltaFemur, -deltaTibia)
+                lastMoveFine=self.bendLimbJoints(deltaFemur, deltaTibia)
                 self.getCurrentPosition()
                 i+=1
 
