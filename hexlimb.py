@@ -13,8 +13,8 @@ class HexLimb(object):
         #0->Hip;1->Femur;2->Tibia
 
         ## Hexbone's min/max default angles
-        defaultMinAngle=0
-        defaultMaxAngle=180
+        defaultMinAngle=-90
+        defaultMaxAngle=+90
         
         #Setting precision of Limb Positioning
         self.precision=1
@@ -58,7 +58,7 @@ class HexLimb(object):
         return self.tibia.angle
 
     def getNorTibiaAngle(self):
-        return 180-self.tibia.angle
+        return 90-self.tibia.angle
 
 
     def setHipAngle(self, angle):
@@ -76,13 +76,20 @@ class HexLimb(object):
     def getNorHipAngle(self):
         return self.hip.angle
 
+    def getCurrentPosition(self):
+        print('  Hip   |  Femur   |  Tibia   |  x;y ')
+        print(' Hip: %2.1f   |  %2.1f    |  %2.1f    |  %.2f;%.2f' % (self.getNorHipAngle(),
+                                                              self.getNorFemurAngle(),
+                                                              self.getNorTibiaAngle(),
+                                                              self.x, self.y)) 
+        
     def calcPosition(self):
         #Callback function (when setAngle is called) to update tip position
         try:
             L1=self.femur.length
             L2=self.tibia.length
-            a1=90-self.femur.angle#########!!!!!!
-            a2=180-self.tibia.angle
+            a1=self.getNorFemurAngle()
+            a2=self.getNorTibiaAngle()
             self.x=L1*math.cos(math.radians(a1))+L2*math.cos(math.radians(a1-a2))
             self.y=L1*math.sin(math.radians(a1))+L2*math.sin(math.radians(a1-a2))
         except:
@@ -111,8 +118,10 @@ class HexLimb(object):
                 alpha1=self.getNorFemurAngle()
                 alpha2=self.getNorTibiaAngle()
                 (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
-                lastMoveFine=self.bendLimbJoints(deltaFemur, deltaTibia)
+                lastMoveFine=self.bendLimbJoints(deltaFemur, -deltaTibia)
+                self.getCurrentPosition()
                 i+=1
+
 
     def updatePositions(self):
         self.setFemurAngle(self.femur.angle)

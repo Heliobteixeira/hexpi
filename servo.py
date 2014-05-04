@@ -60,7 +60,7 @@ class Servo(object):
         def _setPWM(self, value):
                 self._pwm.setPWM(self.channel, 0, value)
                 self._actualpwm=value
-                print('PWM set to: %s' % value)
+                #print('PWM set to: %s' % value)
 
         def _convAngleToPWM(self, angle):
 #                return int(0.0022*pwm**2-2.416*pwm+500.42)
