@@ -76,9 +76,24 @@ class HexLimb(object):
     def getNorHipAngle(self):
         return self.hip.angle
 
+    def setOffsets(self, hipOffset=None, femurOffset=None, tibiaOffset=None):
+        success=True
+        if hipOffset is not None:
+            if not self.hip.setOffset(hipOffset):
+                success=False
+                
+        if femurOffset is not None:
+            if not self.femur.setOffset(femurOffset):
+                success=False
+                
+        if tibiaOffset is not None:
+            if not self.tibia.setOffset(tibiaOffset):
+                success=False 
+        
+        return success
+    
     def getCurrentPosition(self):
-        print('  Hip   |  Femur   |  Tibia   |  x;y ')
-        print(' Hip: %2.1f   |  %2.1f    |  %2.1f    |  %.2f;%.2f' % (self.getNorHipAngle(),
+        print(' Hip: %2.1f   | Femur: %2.1f    | Tibia: %2.1f    |  x=%.2f;y=%.2f' % (self.getNorHipAngle(),
                                                               self.getNorFemurAngle(),
                                                               self.getNorTibiaAngle(),
                                                               self.x, self.y)) 
@@ -97,6 +112,11 @@ class HexLimb(object):
         else:
             return True        
 
+    def calcCurrentDistToPoint(self, x, y):
+        xi=self.x
+        yi=self.y
+        return float( ((x-xi)**2+(y-yi)**2)**(1/2.0) )
+    
     def bendLimbJoints(self, femurBendAngle, tibiaBendAngle):
         #Bends Femur and Tibia simultaneously
         if self.checkFemurBend(femurBendAngle) and self.checkTibiaBend(tibiaBendAngle):
@@ -119,9 +139,15 @@ class HexLimb(object):
                 alpha2=self.getNorTibiaAngle()
                 (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
                 lastMoveFine=self.bendLimbJoints(deltaFemur, deltaTibia)
-                self.getCurrentPosition()
+                print('Distance to target: %f.2' % self.calcCurrentDistToPoint(x,y))
                 i+=1
-
+        if lastMoveFine:
+            print('******Success!****** \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.calcCurrentDistToPoint(x,y)))
+        else:
+            print('...Unable To Reach... \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.calcCurrentDistToPoint(x,y)))
+        print('Current Position:')
+        self.getCurrentPosition()
+        
 
     def updatePositions(self):
         self.setFemurAngle(self.femur.angle)

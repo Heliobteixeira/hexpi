@@ -13,10 +13,8 @@ class HexModel(object):
 		     6: hexlimb.HexLimb(0x60, [8,9,10], [10,70,125], [1,1,0]),
                     }
         
-##        self.targetCalibration = None
-##        self.servoCalibration = None
-##        self.calibrationFile = 'calibration.json'
-##        self._loadCalibration()
+        self.calibrationFile = 'calibration.json'
+        self._loadCalibration()
     def stepLimbsSequence(self, indexSequenceArray, wait=1):
         for limbIndex in indexSequenceArray:
             self.limbs[limbIndex].doStep(wait)
@@ -88,30 +86,40 @@ class HexModel(object):
         self.limbs[4].stepRotatedBack(80,30, True)
         self.limbs[1].stepRotatedBack(80,30, False)
         self.limbs[6].stepRotatedFront(80,30, False)
-        
-    def setCalibration(self, targetCalibration, servoCalibration):
-##        self.targetCalibration = targetCalibration
-        self.servoCalibration = servoCalibration
-##        self._generateTransform()
-        self._saveCalibration()
 
-    def getCalibration(self):
-##        return self.targetCalibration, self.servoCalibration
-        return self.servoCalibration        
+    def setLimbOffsets(self, limbIndex, hipOffset=None, femurOffset=None, tibiaOffset=None ):
+        if limbIndex not in self.limbs.keys():
+            print('Invalid limbIndex:%s' % limbIndex)
+            return False
+        
+        if not self.limbs[limbIndex].setOffsets(hipOffset,femurOffset,tibiaOffset):
+            print('Error applying offset values to limbIndex:%s' % limbIndex)
+
+        #Saves the rest of the valid values
+        self._saveCalibration()
+  
 
     def _loadCalibration(self):
         ##TODO
         try:
-            with open(self.calibrationFile, 'r') as file:
-                cal = json.loads(file.read())
-##                self.targetCalibration = cal['targetCalibration']
-                self.servoCalibration = cal['servoCalibration']
+            file=open(self.calibrationFile, 'r')
+            limbsCalibration=json.load(file)
         except IOError:
             pass
+        else:
+            for limbIndex, limb in limbsCalibration.iteritems():
+                print(limb)
+                self.limbs[int(limbIndex)].hip.offset=int(limb['hip'])
+                self.limbs[int(limbIndex)].femur.offset=int(limb['femur'])
+                self.limbs[int(limbIndex)].tibia.offset=int(limb['tibia'])
 
     def _saveCalibration(self):
-        ##TODO
-        with open(self.calibrationFile, 'w') as file:
-##            file.write(json.dumps({'targetCalibration': self.targetCalibration, 'servoCalibration': self.servoCalibration }))
-            file.write(json.dumps({'servoCalibration': self.servoCalibration }))
+        #Saves current offset value for set for each servo composing the limbs
+        limbsCalibration={}
+        for limbIndex, limb in self.limbs.items():
+            auxCalib={'hip':limb.hip.offset, 'femur':limb.femur.offset, 'tibia':limb.tibia.offset}
+            limbsCalibration[limbIndex]=auxCalib
 
+        
+        with open(self.calibrationFile, 'w') as file:
+            json.dump(limbsCalibration, file)
