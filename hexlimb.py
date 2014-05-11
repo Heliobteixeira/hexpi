@@ -25,7 +25,7 @@ class HexLimb(object):
         self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 0, 158, 643, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
 
         #Reset servo positions after servo calibration
-        self.updatePositions()
+        self.defaultPosition()
         self.calcPosition()
 
     ##Code hip movement functions
@@ -111,11 +111,6 @@ class HexLimb(object):
             return False
         else:
             return True        
-
-    def calcCurrentDistToPoint(self, x, y):
-        xi=self.x
-        yi=self.y
-        return float( ((x-xi)**2+(y-yi)**2)**(1/2.0) )
     
     def bendLimbJoints(self, femurBendAngle, tibiaBendAngle):
         #Bends Femur and Tibia simultaneously
@@ -129,22 +124,33 @@ class HexLimb(object):
     def distTo(self, x, y):
         return math.sqrt((x-self.x)**2+(y-self.y)**2)
 
+    def iterateFemurTibiaBend(self,targetPosition):
+        x, y = targetPosition
+        length1=self.femur.length
+        length2=self.tibia.length
+        alpha1=self.getNorFemurAngle()
+        alpha2=self.getNorTibiaAngle()
+        (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)        
+
+        return (deltaFemur, deltaTibia)
+
     def moveTipTo(self, x, y):
         i=0
         lastMoveFine=True
         while self.distTo(x,y)>self.precision and i<500 and lastMoveFine:
+                #TODO: Replace by iterateFemurTibiaBend
                 length1=self.femur.length
                 length2=self.tibia.length
                 alpha1=self.getNorFemurAngle()
                 alpha2=self.getNorTibiaAngle()
                 (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
                 lastMoveFine=self.bendLimbJoints(deltaFemur, deltaTibia)
-                print('Distance to target: %f.2' % self.calcCurrentDistToPoint(x,y))
+                print('Distance to target: %f.2' % self.distTo(x,y))
                 i+=1
         if lastMoveFine:
-            print('******Success!****** \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.calcCurrentDistToPoint(x,y)))
+            print('******Success!****** \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.distTo(x,y)))
         else:
-            print('...Unable To Reach... \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.calcCurrentDistToPoint(x,y)))
+            print('...Unable To Reach... \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.distTo(x,y)))
         print('Current Position:')
         self.getCurrentPosition()
         
@@ -155,8 +161,8 @@ class HexLimb(object):
 
 ## Testing Functions:
     def defaultPosition(self):
-        self.setTibiaAngle(0)
-        self.setFemurAngle(0)
+        self.setTibiaAngle(45)
+        self.setFemurAngle(45)
         self.setHipAngle(0)
 
     def doStep(self, wait=1):
