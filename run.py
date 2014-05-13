@@ -5,8 +5,9 @@ import pdb
 
 def main():
 	m = hexmodel.HexModel()
-##	m.moveLimbsTipTo([1,2,3], [70,-100])
-	pdb.set_trace()
+	m.limbs[4].printPosition()
+	m.moveLimbsTipTo([4],[180,0,-130])
+##	pdb.set_trace()
 
 
 if __name__ == '__main__':

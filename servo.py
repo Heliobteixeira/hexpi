@@ -104,13 +104,17 @@ class Servo(object):
         def getOffset(self):
                 return self.offset
 
-        def setAngle(self, angle):
-                ##Executes order to move servo to specified angle
-                ##Returns False if not possible or True if OK
+        def _calcOffsetAngle(self, angle):
                 offsetAngle=self.offset+angle
                 if self.reversed:
                         offsetAngle=-offsetAngle #Reverses angle in case of servo 'reversed'
-                        
+                return offsetAngle
+        
+        def setAngle(self, angle):
+                ##Executes order to move servo to specified angle
+                ##Returns False if not possible or True if OK
+                offsetAngle=self._calcOffsetAngle(angle)
+                
                 if not self.checkServoAngle(offsetAngle):
                         #Angle not within servo range
                         return False

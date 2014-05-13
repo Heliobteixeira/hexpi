@@ -2,22 +2,22 @@ import json
 import numpy as np
 import time
 import hexlimb
-import ik
 
 class HexModel(object):
     def __init__(self):
         self.limbs={
-                     1: hexlimb.HexLimb(0x40, [0,1,2], [10,70,125], [1,1,1]),
-		     2: hexlimb.HexLimb(0x40, [4,5,6], [10,70,125], [1,1,1]),
-		     3: hexlimb.HexLimb(0x40, [8,9,10], [10,70,125], [1,1,1]),
-		     4: hexlimb.HexLimb(0x60, [0,1,2], [10,70,125], [0,0,0]),
-		     5: hexlimb.HexLimb(0x60, [4,5,6], [10,70,125], [0,0,0]),
-		     6: hexlimb.HexLimb(0x60, [8,9,10], [10,70,125], [0,0,0]),
+                     1: hexlimb.HexLimb(0x40, [0,1,2], [25,70,123], [1,1,1]),
+		     2: hexlimb.HexLimb(0x40, [4,5,6], [25,70,123], [1,1,1]),
+		     3: hexlimb.HexLimb(0x40, [8,9,10], [25,70,123], [1,1,1]),
+		     4: hexlimb.HexLimb(0x60, [0,1,2], [25,70,123], [0,0,0]),
+		     5: hexlimb.HexLimb(0x60, [4,5,6], [25,70,123], [0,0,0]),
+		     6: hexlimb.HexLimb(0x60, [8,9,10], [25,70,123], [0,0,0]),
                     }
         
         self.calibrationFile = 'calibration.json'
         self._loadCalibration()
-        self.precision=1
+        self.precision=0.5
+        self.LAMBDA=200  # 20<LAMBDA<50
         self.maxIterations=500
     def stepLimbsSequence(self, indexSequenceArray, wait=1):
         for limbIndex in indexSequenceArray:
@@ -94,12 +94,12 @@ class HexModel(object):
     def moveLimbsTipTo(self, arrayLimbs, targetPosition):
         #Moves a set of limbs to a targetPosition (x,y)
         i=0
-        x,y=targetPosition
+        x,y,z=targetPosition
         
         #Calculate current Distance to target Position
         maxLimbsDistance=0
         for limbIndex in arrayLimbs:
-            maxLimbsDistance=max(maxLimbsDistance, self.limbs[limbIndex].distTo(x,y))
+            maxLimbsDistance=max(maxLimbsDistance, self.limbs[limbIndex].distTo(x,y,z))
         currentDistance=maxLimbsDistance
         
         lastMoveFine=True
@@ -109,19 +109,23 @@ class HexModel(object):
             #Iterates ALL limbs to approximate desired target position
             for limbIndex in arrayLimbs:
                 #Calculates necessary bend angle for current iteration
-                (deltaFemur, deltaTibia)=self.limbs[limbIndex].iterateFemurTibiaBend(targetPosition)
-                #print('Femur;Tibia Bend: %s;%s' % (deltaFemur, deltaTibia))
+                (deltaHip, deltaFemur, deltaTibia)=self.limbs[limbIndex].iterateHipFemurTibiaBend(targetPosition, self.LAMBDA)
+                
                 #Checks if move is successful 
-                if not self.limbs[limbIndex].bendLimbJoints(deltaFemur, deltaTibia):
-                    print('Error trying to bend limb %s. Femur Bend: %s, Tibia Bend: %s' % limbIndex, deltaFemur, deltaTibia)
+                if not self.limbs[limbIndex].bendLimbJoints(deltaHip, deltaFemur, deltaTibia):
+                    print('Error trying to bend limb %s. Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (limbIndex, deltaHip, deltaFemur, deltaTibia))
                     lastMoveFine=False
                 else:                       
-                    #Calculates current distance to target position	
-                    maxLimbsDistance=max(maxLimbsDistance,self.limbs[limbIndex].distTo(x,y))
+                    #Calculates current distance to target position
+                    currentDistance=self.limbs[limbIndex].distTo(x,y,z)
+                    maxLimbsDistance=max(maxLimbsDistance,currentDistance)
+                    self.limbs[limbIndex].printPosition()
+                    print('Distance:%s' % currentDistance)
+                    ##print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
             currentDistance=maxLimbsDistance
 
         if currentDistance<=self.precision:
-            print('Target position reached. Current distance: %s' % currentDistance)
+            print('Target position reached. Current distance: %s Iterations: %s' % (currentDistance, i))
         else:
             print('Unable to reach target position. Current distance %s' % currentDistance)
             print('Iterations: %s' % i)

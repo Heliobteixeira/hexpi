@@ -1,8 +1,7 @@
-import json
 import sys
 ##import numpy as np
 from hexbone import HexBone
-import ik
+from InverseKinematics import ik
 import math
 from time import sleep
 
@@ -24,6 +23,7 @@ class HexLimb(object):
         self.femur = HexBone(I2C_ADDRESS, bonesChannelsArray[1], bonesLengthArray[1], 0, 149, 651, revArray[1], defaultMinAngle, defaultMaxAngle, self.calcPosition)
         self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 0, 158, 643, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
 
+        self.origin=[0,0,0] #Correct this along the code and include as parameter of __init__
         #Reset servo positions after servo calibration
         self.defaultPosition()
         self.calcPosition()
@@ -92,47 +92,57 @@ class HexLimb(object):
         
         return success
     
-    def getCurrentPosition(self):
-        print(' Hip: %2.1f   | Femur: %2.1f    | Tibia: %2.1f    |  x=%.2f;y=%.2f' % (self.getNorHipAngle(),
+    def printPosition(self):
+        print(' Hip: %2.1f   | Femur: %2.1f    | Tibia: %2.1f    |  x=%.2f;y=%.2f;z=%.2f' % (self.getNorHipAngle(),
                                                               self.getNorFemurAngle(),
                                                               self.getNorTibiaAngle(),
-                                                              self.x, self.y)) 
+                                                              self.x, self.y, self.z)) 
         
     def calcPosition(self):
         #Callback function (when setAngle is called) to update tip position
         try:
-            L1=self.femur.length
-            L2=self.tibia.length
-            a1=self.getNorFemurAngle()
-            a2=self.getNorTibiaAngle()
-            self.x=L1*math.cos(math.radians(a1))+L2*math.cos(math.radians(a1-a2))
-            self.y=L1*math.sin(math.radians(a1))+L2*math.sin(math.radians(a1-a2))
+            L1=self.hip.length
+            L2=self.femur.length
+            L3=self.tibia.length
+            alpha=math.radians(self.getNorHipAngle())
+            beta=math.radians(self.getNorFemurAngle())  # RADIANS!!!
+            gamma=math.radians(self.getNorTibiaAngle())
+##            self.x=L1*math.cos(math.radians(a1))+L2*math.cos(math.radians(a1-a2))
+##            self.z=L1*math.sin(math.radians(a1))+L2*math.sin(math.radians(a1-a2))
+            
+            projL=L1+L2*math.cos(beta)+L3*math.cos(beta-gamma)
+            self.x=self.origin[0] + math.cos(alpha)*projL
+            self.y=self.origin[1] + math.sin(alpha)*projL
+            self.z=self.origin[2] + L2*math.sin(beta) + L3*math.sin(beta-gamma)
         except:
             return False
         else:
             return True        
     
-    def bendLimbJoints(self, femurBendAngle, tibiaBendAngle):
+    def bendLimbJoints(self, hipBendAngle, femurBendAngle, tibiaBendAngle):
         #Bends Femur and Tibia simultaneously
-        if self.checkFemurBend(femurBendAngle) and self.checkTibiaBend(tibiaBendAngle):
+        if self.checkHipBend(hipBendAngle) and self.checkFemurBend(femurBendAngle) and self.checkTibiaBend(tibiaBendAngle):
+            self.bendHip(hipBendAngle)
             self.bendFemur(femurBendAngle)
             self.bendTibia(tibiaBendAngle)
             return True
         else:
             return False
 
-    def distTo(self, x, y):
-        return math.sqrt((x-self.x)**2+(y-self.y)**2)
+    def distTo(self, x, y, z):
+        return math.sqrt((x-self.x)**2+(y-self.y)**2+(z-self.z)**2)
 
-    def iterateFemurTibiaBend(self,targetPosition):
-        x, y = targetPosition
-        length1=self.femur.length
-        length2=self.tibia.length
-        alpha1=self.getNorFemurAngle()
-        alpha2=self.getNorTibiaAngle()
-        (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)        
-
-        return (deltaFemur, deltaTibia)
+    def iterateHipFemurTibiaBend(self,targetPosition, LAMBDA):
+        origin=[0,0,0]
+        L1=self.hip.length
+        L2=self.femur.length
+        L3=self.tibia.length
+        alpha=math.radians(self.getNorHipAngle())
+        beta=math.radians(self.getNorFemurAngle())
+        gamma=math.radians(self.getNorTibiaAngle())
+        (deltaHip, deltaFemur, deltaTibia)=ik.ikJacobian3DOF(L1, L2, L3, alpha, beta, gamma, origin, targetPosition, LAMBDA)        
+##        print('Bend Angles: Hip: %s, Femur:%s, Tibia:%s' % (math.degrees(deltaHip), math.degrees(deltaFemur), math.degrees(deltaTibia)))
+        return (math.degrees(deltaHip), math.degrees(deltaFemur), math.degrees(deltaTibia))
 
     def moveTipTo(self, x, y):
         i=0
@@ -161,8 +171,8 @@ class HexLimb(object):
 
 ## Testing Functions:
     def defaultPosition(self):
-        self.setTibiaAngle(45)
-        self.setFemurAngle(45)
+        self.setTibiaAngle(44)
+        self.setFemurAngle(80)
         self.setHipAngle(0)
 
     def doStep(self, wait=1):
