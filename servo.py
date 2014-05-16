@@ -5,7 +5,9 @@ from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
         def __init__(self, i2cAddress, channel, pwm_min, pwm_max, reversed=False, minAngle=-90, maxAngle=90, callback=None):
-                self._pwm=PWM(i2cAddress, debug=True) ##Set debug to False before release
+                self.i2cAddress=i2cAddress
+                self._pwm=PWM(self.i2cAddress, debug=False) ##Set debug to False before release
+
                 self.channel = channel
                 self._pwm.setPWMFreq(60)
 
@@ -93,11 +95,15 @@ class Servo(object):
         def setOffset(self, angleOffset):
                 #Sets offset angle. Returns True if offset successful
                 oldOffset=self.offset
+                
                 self.offset=angleOffset
+
                 #Trying to update servo position according new offset angle
                 if self.setAngle(self.angle):
+                        print('Channel %s (%s)> offset: %s' % (self.channel, self.i2cAddress, self.offset))
                         return True
                 else:
+                        print('Error applying offsets')
                         self.offset=oldOffset
                         return False
 
@@ -121,15 +127,46 @@ class Servo(object):
                 else:
                         pwmvalue=self._convAngleToPWM(offsetAngle)
                         self._setPWM(pwmvalue)
-                        self.angle=angle #Sets the original non offseted angle
+                        self.angle=angle #Sets the original non offseted angle >>CONFIRM
                         if self.callback is not None: self.callback()
                         return True
-
+                
+        def setAngleToMinOrMax(self, minmax):
+                #Sets servo to its min/max (-1/1) angle
+                if minmax==1: ##Max
+                        print('Setting channel %s to Max' % self.channel)
+                        if self.reversed:
+                                angle=self.minangle
+                        else:
+                                angle=self.maxangle
+                else: ##Min
+                        print('Setting channel %s to Min' % self.channel)
+                        if self.reversed:
+                                angle=self.maxangle
+                        else:
+                                angle=self.minangle
+                        
+                if not self.checkServoAngle(angle):
+                        #Angle not within servo range
+                        return False
+                else:
+                        pwmvalue=self._convAngleToPWM(angle)
+                        self._setPWM(pwmvalue)
+                        self.angle=angle 
+                        if self.callback is not None: self.callback()
+                        return True
+                
         def incAngle(self, angleInc):
                 return self.setAngle(self.calcAngleFromInc(angleInc))
         
         def getAngle(self):
                 return self.angle
+
+        def powerOff(self):
+                self._setPWM(0)
+                
+        def powerOn(self):
+                self.setAngle(self.angle)
 
         def refresh(self):
                 return self.setAngle(self.angle)

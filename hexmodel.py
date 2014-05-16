@@ -2,6 +2,7 @@ import json
 import numpy as np
 import time
 import hexlimb
+from datetime import datetime
 
 class HexModel(object):
     def __init__(self):
@@ -19,9 +20,25 @@ class HexModel(object):
         self.precision=0.5
         self.LAMBDA=200  # 20<LAMBDA<50
         self.maxIterations=500
+        print("HexModel initialized")
+
+    def powerOff(self):
+        for limbIndex, limb in self.limbs.items():
+            limb.powerOff()
+            
+    def powerOn(self):
+        for limbIndex, limb in self.limbs.items():
+            limb.powerOn()
+            
     def stepLimbsSequence(self, indexSequenceArray, wait=1):
         for limbIndex in indexSequenceArray:
             self.limbs[limbIndex].doStep(wait)
+
+    def stretchLimbs(self):
+        for limbIndex, limb in self.limbs.items():
+            if not limb.stretch():
+                return False
+        return True
 
     def stretchUp(self, wait=1):
         for limbIndex, limb in self.limbs.items():
@@ -106,22 +123,24 @@ class HexModel(object):
         while currentDistance>self.precision and i<self.maxIterations and lastMoveFine:
             i+=1
             maxLimbsDistance=0
+            t1 = datetime.now()
             #Iterates ALL limbs to approximate desired target position
             for limbIndex in arrayLimbs:
                 #Calculates necessary bend angle for current iteration
-                (deltaHip, deltaFemur, deltaTibia)=self.limbs[limbIndex].iterateHipFemurTibiaBend(targetPosition, self.LAMBDA)
+                (deltaHip, deltaFemur, deltaTibia)=self.limbs[limbIndex].iterateHipFemurTibiaBend(targetPosition, 3)
                 
                 #Checks if move is successful 
                 if not self.limbs[limbIndex].bendLimbJoints(deltaHip, deltaFemur, deltaTibia):
-                    print('Error trying to bend limb %s. Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (limbIndex, deltaHip, deltaFemur, deltaTibia))
+                    ##print('Error trying to bend limb %s. Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (limbIndex, deltaHip, deltaFemur, deltaTibia))
                     lastMoveFine=False
                 else:                       
                     #Calculates current distance to target position
                     currentDistance=self.limbs[limbIndex].distTo(x,y,z)
                     maxLimbsDistance=max(maxLimbsDistance,currentDistance)
-                    self.limbs[limbIndex].printPosition()
-                    print('Distance:%s' % currentDistance)
+##                    self.limbs[limbIndex].printPosition()
+##                    print('Distance:%s' % currentDistance)
                     ##print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
+
             currentDistance=maxLimbsDistance
 
         if currentDistance<=self.precision:
@@ -130,7 +149,38 @@ class HexModel(object):
             print('Unable to reach target position. Current distance %s' % currentDistance)
             print('Iterations: %s' % i)
             if not lastMoveFine:
-                print('Could not make a movement. Limits reached?')					
+                print('Could not make a movement. Limits reached?')
+
+    def positionLimbsTipTo(self, arrayLimbs, targetPosition):
+        #Moves a set of limbs to a targetPosition (x,y)
+        i=0
+        x,y,z=targetPosition
+        maxLimbsDistance=0
+        #Iterates ALL limbs to approximate desired target position
+        for limbIndex in arrayLimbs:
+            #Calculates necessary bend angle for current iteration
+            (deltaHip, deltaFemur, deltaTibia)=self.limbs[limbIndex].calculateHipFemurTibiaBend(targetPosition)
+            
+            #Checks if move is successful 
+            if not self.limbs[limbIndex].bendLimbJoints(deltaHip, deltaFemur, deltaTibia):
+                print('Error trying to bend limb %s. Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (limbIndex, deltaHip, deltaFemur, deltaTibia))
+                lastMoveFine=False
+            else:                       
+                #Calculates current distance to target position
+                currentDistance=self.limbs[limbIndex].distTo(x,y,z)
+                maxLimbsDistance=max(maxLimbsDistance,currentDistance)
+                ##self.limbs[limbIndex].printPosition()
+                print('Distance:%s' % currentDistance)
+                ##print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
+        currentDistance=maxLimbsDistance
+
+        if currentDistance<=self.precision:
+            print('Target position reached. Current distance: %s Iterations: %s' % (currentDistance, i))
+        else:
+            print('Unable to reach target position. Current distance %s' % currentDistance)
+            print('Iterations: %s' % i)
+            if not lastMoveFine:
+                print('Could not make a movement. Limits reached?')	
 
     def setLimbOffsets(self, limbIndex, hipOffset=None, femurOffset=None, tibiaOffset=None ):
         if limbIndex not in self.limbs.keys():
@@ -145,18 +195,15 @@ class HexModel(object):
   
 
     def _loadCalibration(self):
-        ##TODO
         try:
             file=open(self.calibrationFile, 'r')
             limbsCalibration=json.load(file)
         except IOError:
             pass
         else:
+            print('Loading calibration file: %s' % self.calibrationFile)
             for limbIndex, limb in limbsCalibration.iteritems():
-                print(limb)
-                self.limbs[int(limbIndex)].hip.offset=int(limb['hip'])
-                self.limbs[int(limbIndex)].femur.offset=int(limb['femur'])
-                self.limbs[int(limbIndex)].tibia.offset=int(limb['tibia'])
+                self.limbs[int(limbIndex)].setOffsets(int(limb['hip']), int(limb['femur']), int(limb['tibia']))
 
     def _saveCalibration(self):
         #Saves current offset value for set for each servo composing the limbs

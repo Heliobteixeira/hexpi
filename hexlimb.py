@@ -28,6 +28,16 @@ class HexLimb(object):
         self.defaultPosition()
         self.calcPosition()
 
+    def powerOff(self):
+        self.hip.powerOff()
+        self.femur.powerOff()
+        self.tibia.powerOff()
+
+    def powerOn(self):
+        self.hip.powerOn()
+        self.femur.powerOn()
+        self.tibia.powerOn()        
+
     ##Code hip movement functions
     def setFemurAngle(self, angle):
         return self.femur.setAngle(angle)
@@ -46,7 +56,7 @@ class HexLimb(object):
 
         
     def setTibiaAngle(self, angle):
-        return self.tibia.setAngle(angle)
+        return self.tibia.setAngle(angle-90)
 
     def checkTibiaBend(self, bendangle):
         return self.tibia.checkIncAngle(bendangle)
@@ -132,7 +142,7 @@ class HexLimb(object):
     def distTo(self, x, y, z):
         return math.sqrt((x-self.x)**2+(y-self.y)**2+(z-self.z)**2)
 
-    def iterateHipFemurTibiaBend(self,targetPosition, LAMBDA):
+    def iterateHipFemurTibiaBend(self,targetPosition, maxAngleDisp):
         origin=[0,0,0]
         L1=self.hip.length
         L2=self.femur.length
@@ -140,10 +150,39 @@ class HexLimb(object):
         alpha=math.radians(self.getNorHipAngle())
         beta=math.radians(self.getNorFemurAngle())
         gamma=math.radians(self.getNorTibiaAngle())
-        (deltaHip, deltaFemur, deltaTibia)=ik.ikJacobian3DOF(L1, L2, L3, alpha, beta, gamma, origin, targetPosition, LAMBDA)        
-##        print('Bend Angles: Hip: %s, Femur:%s, Tibia:%s' % (math.degrees(deltaHip), math.degrees(deltaFemur), math.degrees(deltaTibia)))
-        return (math.degrees(deltaHip), math.degrees(deltaFemur), math.degrees(deltaTibia))
+        (deltaHip, deltaFemur, deltaTibia)=ik.ikJacobian3DOF(L1, L2, L3, alpha, beta, gamma, origin, targetPosition)
+        (deltaHip, deltaFemur, deltaTibia)=(math.degrees(deltaHip), math.degrees(deltaFemur), math.degrees(deltaTibia))
+        
+        currMaxAngle=max(abs(deltaHip), abs(deltaFemur), abs(deltaTibia))
+        
+        if currMaxAngle>maxAngleDisp:
+            fact=maxAngleDisp/currMaxAngle
+            (deltaHip, deltaFemur, deltaTibia)=(deltaHip*fact, deltaFemur*fact, deltaTibia*fact)
+            
+        ##print('Bend Angles: Hip: %s, Femur:%s, Tibia:%s' % (deltaHip, deltaFemur, deltaTibia))
+        return (deltaHip, deltaFemur, deltaTibia)
 
+    def calculateHipFemurTibiaBend(self, targetPosition):
+        origin=[0,0,0]
+        L1=self.hip.length
+        L2=self.femur.length
+        L3=self.tibia.length
+    
+        ## Fetching current angles position:
+        startAlpha=math.radians(self.getNorHipAngle())
+        startBeta=math.radians(self.getNorFemurAngle())
+        startGamma=math.radians(self.getNorTibiaAngle())
+
+        ## Calculating final angles position:
+        (endAlpha, endBeta, endGamma)=ik.ikAnalytical3DOF(L1, L2, L3, origin, targetPosition)
+
+        deltaAlpha=math.degrees(endAlpha-startAlpha)
+        deltaBeta=math.degrees(endBeta-startBeta)
+        deltaGamma=math.degrees(endGamma-startGamma)
+
+        print('Will rotate:'+str((deltaAlpha, deltaBeta, deltaGamma)))
+        return (deltaAlpha, deltaBeta, deltaGamma)
+        
     def moveTipTo(self, x, y):
         i=0
         lastMoveFine=True
@@ -169,54 +208,27 @@ class HexLimb(object):
         self.setFemurAngle(self.femur.angle)
         self.setTibiaAngle(self.tibia.angle)
 
-## Testing Functions:
     def defaultPosition(self):
-        self.setTibiaAngle(44)
-        self.setFemurAngle(80)
+        self.setTibiaAngle(113)
+        self.setFemurAngle(61)
         self.setHipAngle(0)
 
-    def doStep(self, wait=1):
-        ##Position all Limbs in known position because uses bend instead of setAngle
-        ##Change to setAngle!!!
-        femurAngle=30
-        tibiaAngle=30
-        hipAngle=20
-        self.defaultPosition()
-        self.bendFemur(femurAngle)
-        self.bendTibia(-tibiaAngle)
-        self.bendHip(hipAngle)
-        sleep(wait)       
-        self.bendFemur(-femurAngle)
-        self.bendTibia(tibiaAngle)
-        sleep(wait)
-        self.bendHip(-hipAngle)
-        sleep(wait)
-
-    def stretchUp(self):
-        self.setFemurAngle(40)
-        self.setTibiaAngle(40)
-
-    def stretchDown(self):
-        self.setFemurAngle(-40)
-        self.setTibiaAngle(50)
-
-    def contract(self):
-        self.setFemurAngle(40)
-        self.setTibiaAngle(-35)        
-
-    def stretchFront(self):
-        self.setHipAngle(20)
+    def stretch(self):
+        #Stretchs the Limbs granting that it will do it in the air whitout touching the ground
+        #TODO: Detect max femur and tibia angle permited to go
+        if not self.femur.setAngleToMinOrMax(1):
+            return False
+        else:
+            sleep(1)
+        if not self.tibia.setAngleToMinOrMax(-1):
+            return False
+        else:
+            sleep(1)
+        if not self.setFemurAngle(0):
+            return False
+        else:
+            sleep(1)
+            return True
         
-    def stretchBack(self):
-        self.setHipAngle(-20)
-
-    def lift(self):
-        self.setFemurAngle(30)
-
-    def stepRotatedFront(self, hipAngle):
-        ##self.defaultPosition()
-        self.bendHip(hipAngle) ##TODO: Interpolate movement
-
-    def stepRotatedBack(self, hipAngle):
-        ##self.defaultPosition()
-        self.bendHip(-hipAngle) ##TODO: Interpolate movement
+        
+        
