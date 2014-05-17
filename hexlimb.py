@@ -8,15 +8,12 @@ from time import sleep
 class HexLimb(object):
                     
     ##Reformular com base nas alteracoes da classe Servo
-    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revArray):
+    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revArray, startPosition):
         #0->Hip;1->Femur;2->Tibia
-
+        
         ## Hexbone's min/max default angles
         defaultMinAngle=-90
         defaultMaxAngle=+90
-        
-        #Setting precision of Limb Positioning
-        self.precision=1
         
         #Setting i2c address and servo channels
         self.hip   = HexBone(I2C_ADDRESS, bonesChannelsArray[0], bonesLengthArray[0], 0, 158, 643, revArray[0], defaultMinAngle, defaultMaxAngle, self.calcPosition)
@@ -24,6 +21,7 @@ class HexLimb(object):
         self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 0, 158, 643, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
 
         self.origin=[0,0,0] #Correct this along the code and include as parameter of __init__
+        self.startPosition=startPosition
         #Reset servo positions after servo calibration
         self.defaultPosition()
         self.calcPosition()
@@ -180,28 +178,62 @@ class HexLimb(object):
         deltaBeta=math.degrees(endBeta-startBeta)
         deltaGamma=math.degrees(endGamma-startGamma)
 
-        print('Will rotate:'+str((deltaAlpha, deltaBeta, deltaGamma)))
+        #print('Will rotate:'+str((deltaAlpha, deltaBeta, deltaGamma)))
         return (deltaAlpha, deltaBeta, deltaGamma)
+    
+    def rapidMove(self, targetPosition):
+        #Moves a set of limbs to a targetPosition (x,y)
+        x,y,z=targetPosition
+
+        #Calculates necessary bend angle for current iteration
+        (deltaHip, deltaFemur, deltaTibia)=self.calculateHipFemurTibiaBend(targetPosition)
         
-    def moveTipTo(self, x, y):
+        #Checks if move is successful 
+        if not self.bendLimbJoints(deltaHip, deltaFemur, deltaTibia):
+            print('Error trying to bend limb. Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (deltaHip, deltaFemur, deltaTibia))
+            return False
+        else:                       
+            #Calculates current distance to target position
+            currentDistance=self.distTo(x,y,z)
+            ##self.limbs[limbIndex].printPosition()
+            print('Target position reached. Current distance: %s' % currentDistance)
+            ##print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
+            return True
+        
+    def linearMove(self, targetPosition, precision=0.5, maxAngleVar=10, maxIterations=500):
+        #Moves limbs to a targetPosition (x,y)
         i=0
+        x,y,z=targetPosition
+        
+        #Calculate current Distance to target Position
+        currentDistance=self.distTo(x,y,z)
+        
         lastMoveFine=True
-        while self.distTo(x,y)>self.precision and i<500 and lastMoveFine:
-                #TODO: Replace by iterateFemurTibiaBend
-                length1=self.femur.length
-                length2=self.tibia.length
-                alpha1=self.getNorFemurAngle()
-                alpha2=self.getNorTibiaAngle()
-                (deltaFemur, deltaTibia)=ik.ik2DOFJacobian(length1, length2, alpha1, alpha2, 0, 0, x, y)
-                lastMoveFine=self.bendLimbJoints(deltaFemur, deltaTibia)
-                print('Distance to target: %f.2' % self.distTo(x,y))
-                i+=1
-        if lastMoveFine:
-            print('******Success!****** \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.distTo(x,y)))
+        while currentDistance>precision and i<maxIterations and lastMoveFine:
+            i+=1
+            #Calculates necessary bend angle for current iteration
+            (deltaHip, deltaFemur, deltaTibia)=self.iterateHipFemurTibiaBend(targetPosition, maxAngleVar)
+            
+            #Checks if move is successful 
+            if not self.bendLimbJoints(deltaHip, deltaFemur, deltaTibia):
+                print('Error trying to bend limb Hip: %s, Femur Bend: %s, Tibia Bend: %s' % ( deltaHip, deltaFemur, deltaTibia))
+                lastMoveFine=False
+            else:                       
+                #Calculates current distance to target position
+                currentDistance=self.distTo(x,y,z)
+##                    self.printPosition()
+##                    print('Distance:%s' % currentDistance)
+##                    print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
+
+        if currentDistance<=precision:
+            print('Target position reached. Current distance: %s Iterations: %s' % (currentDistance, i))
+            return True
         else:
-            print('...Unable To Reach... \n-NbrIterations: %i\nCurrDistToTarget:%f.2' % (i, self.distTo(x,y)))
-        print('Current Position:')
-        self.getCurrentPosition()
+            print('Unable to reach target position. Current distance %s' % currentDistance)
+            print('Iterations: %s' % i)
+            if not lastMoveFine:
+                print('Could not make a movement. Limits reached?')
+            return False
         
 
     def updatePositions(self):
@@ -209,9 +241,7 @@ class HexLimb(object):
         self.setTibiaAngle(self.tibia.angle)
 
     def defaultPosition(self):
-        self.setTibiaAngle(113)
-        self.setFemurAngle(61)
-        self.setHipAngle(0)
+        self.rapidMove([120,0,-40])
 
     def stretch(self):
         #Stretchs the Limbs granting that it will do it in the air whitout touching the ground
