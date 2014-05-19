@@ -8,7 +8,7 @@ from time import sleep
 class HexLimb(object):
                     
     ##Reformular com base nas alteracoes da classe Servo
-    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revArray, startPosition):
+    def __init__(self, I2C_ADDRESS, bonesChannelsArray, bonesLengthArray, revArray, offsetArray, startPosition):
         #0->Hip;1->Femur;2->Tibia
         
         ## Hexbone's min/max default angles
@@ -16,9 +16,9 @@ class HexLimb(object):
         defaultMaxAngle=+90
         
         #Setting i2c address and servo channels
-        self.hip   = HexBone(I2C_ADDRESS, bonesChannelsArray[0], bonesLengthArray[0], 0, 158, 643, revArray[0], defaultMinAngle, defaultMaxAngle, self.calcPosition)
-        self.femur = HexBone(I2C_ADDRESS, bonesChannelsArray[1], bonesLengthArray[1], 0, 149, 651, revArray[1], defaultMinAngle, defaultMaxAngle, self.calcPosition)
-        self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 0, 158, 643, revArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.hip   = HexBone(I2C_ADDRESS, bonesChannelsArray[0], bonesLengthArray[0], 0, 158, 643, revArray[0], offsetArray[0], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.femur = HexBone(I2C_ADDRESS, bonesChannelsArray[1], bonesLengthArray[1], 0, 149, 651, revArray[1], offsetArray[1], defaultMinAngle, defaultMaxAngle, self.calcPosition)
+        self.tibia = HexBone(I2C_ADDRESS, bonesChannelsArray[2], bonesLengthArray[2], 0, 158, 643, revArray[2], offsetArray[2], defaultMinAngle, defaultMaxAngle, self.calcPosition)
 
         self.origin=[0,0,0] #Correct this along the code and include as parameter of __init__
         self.startPosition=startPosition
@@ -36,6 +36,9 @@ class HexLimb(object):
         self.femur.powerOn()
         self.tibia.powerOn()        
 
+    def getPosition(self):
+        return [self.x, self.y, self.z]
+    
     ##Code hip movement functions
     def setFemurAngle(self, angle):
         return self.femur.setAngle(angle)
@@ -96,6 +99,22 @@ class HexLimb(object):
                 
         if tibiaOffset is not None:
             if not self.tibia.setOffset(tibiaOffset):
+                success=False 
+        
+        return success
+
+    def incOffsets(self, hipOffset=None, femurOffset=None, tibiaOffset=None):
+        success=True
+        if hipOffset is not None:
+            if not self.hip.incOffset(hipOffset):
+                success=False
+                
+        if femurOffset is not None:
+            if not self.femur.incOffset(femurOffset):
+                success=False
+                
+        if tibiaOffset is not None:
+            if not self.tibia.incOffset(tibiaOffset):
                 success=False 
         
         return success
@@ -196,11 +215,11 @@ class HexLimb(object):
             #Calculates current distance to target position
             currentDistance=self.distTo(x,y,z)
             ##self.limbs[limbIndex].printPosition()
-            print('Target position reached. Current distance: %s' % currentDistance)
+            #print('Target position reached. Current distance: %s' % currentDistance)
             ##print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
             return True
         
-    def linearMove(self, targetPosition, precision=0.5, maxAngleVar=10, maxIterations=500):
+    def linearMove(self, targetPosition, precision=0.5, maxAngleVar=2, maxIterations=500):
         #Moves limbs to a targetPosition (x,y)
         i=0
         x,y,z=targetPosition
@@ -226,7 +245,7 @@ class HexLimb(object):
 ##                    print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltaHip, deltaFemur, deltaTibia, currentDistance))
 
         if currentDistance<=precision:
-            print('Target position reached. Current distance: %s Iterations: %s' % (currentDistance, i))
+            #print('Target position reached. Current distance: %s Iterations: %s' % (currentDistance, i))
             return True
         else:
             print('Unable to reach target position. Current distance %s' % currentDistance)

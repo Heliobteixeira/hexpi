@@ -4,7 +4,7 @@ import sys
 from Adafruit_PWM_Servo_Driver import PWM
 
 class Servo(object):
-        def __init__(self, i2cAddress, channel, pwm_min, pwm_max, reversed=False, minAngle=-90, maxAngle=90, callback=None):
+        def __init__(self, i2cAddress, channel, pwm_min, pwm_max, reversed=False, offset=0, minAngle=-90, maxAngle=90, callback=None):
                 self.i2cAddress=i2cAddress
                 self._pwm=PWM(self.i2cAddress, debug=False) ##Set debug to False before release
 
@@ -18,7 +18,7 @@ class Servo(object):
                 
                 self.angle = None
                 self.angleThrow = 180 #Maximum angle throw of servo end-to-end 
-                self.offset = 0
+                self.offset = offset
                 self.reversed=reversed
                 self.callback=callback
 
@@ -97,6 +97,21 @@ class Servo(object):
                 oldOffset=self.offset
                 
                 self.offset=angleOffset
+
+                #Trying to update servo position according new offset angle
+                if self.setAngle(self.angle):
+                        print('Channel %s (%s)> offset: %s' % (self.channel, self.i2cAddress, self.offset))
+                        return True
+                else:
+                        print('Error applying offsets')
+                        self.offset=oldOffset
+                        return False
+
+        def incOffset(self, angleOffset):
+                #Sets offset angle. Returns True if offset successful
+                oldOffset=self.offset
+                
+                self.offset=self.offset+angleOffset
 
                 #Trying to update servo position according new offset angle
                 if self.setAngle(self.angle):

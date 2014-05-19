@@ -5,8 +5,8 @@ import math
 
 class HexBone(Servo):
     ## Servo.__init__ override:
-    def __init__(self, I2C_ADDRESS, channel, length, startAngle, pwm_min, pwm_max, reversed=False, minAngle=None, maxAngle=None, callback=None):       
-        super(HexBone, self).__init__(I2C_ADDRESS, channel, pwm_min, pwm_max, reversed, minAngle, maxAngle, callback)
+    def __init__(self, I2C_ADDRESS, channel, length, startAngle, pwm_min, pwm_max, reversed=False, minAngle=None, maxAngle=None, offset=0, callback=None):       
+        super(HexBone, self).__init__(I2C_ADDRESS, channel, pwm_min, pwm_max, reversed, minAngle, maxAngle, offset, callback)
         
         #Setting limb's lengths
         self.length=length
