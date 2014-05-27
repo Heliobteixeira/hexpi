@@ -8,17 +8,17 @@ import threading
 
 class HexModel(object):
     def __init__(self):
-        limbStartPosition = [120, 0, -30]
+        limbstartposition = [120, 0, -30]
 
-        self.calibrationFile = 'calibration.json'
-        cal = self._loadCalibration()
+        self.calibrationfile = 'calibration.json'
+        cal = self._loadcalibration()
         self.limbs = {
-            1: hexlimb.HexLimb(0x40, [0, 1, 2], [27, 70, 123], [1, 1, 1], cal[1], limbStartPosition),
-            2: hexlimb.HexLimb(0x40, [4, 5, 6], [27, 70, 123], [1, 1, 1], cal[2], limbStartPosition),
-            3: hexlimb.HexLimb(0x40, [8, 9, 10], [27, 70, 123], [1, 1, 1], cal[3], limbStartPosition),
-            4: hexlimb.HexLimb(0x60, [0, 1, 2], [27, 70, 123], [0, 0, 0], cal[4], limbStartPosition),
-            5: hexlimb.HexLimb(0x60, [4, 5, 6], [27, 70, 123], [0, 0, 0], cal[5], limbStartPosition),
-            6: hexlimb.HexLimb(0x60, [8, 9, 10], [27, 70, 123], [0, 0, 0], cal[6], limbStartPosition),
+            1: hexlimb.HexLimb(0x40, [0, 1, 2], [27, 70, 123], [1, 1, 1], cal[1], limbstartposition),
+            2: hexlimb.HexLimb(0x40, [4, 5, 6], [27, 70, 123], [1, 1, 1], cal[2], limbstartposition),
+            3: hexlimb.HexLimb(0x40, [8, 9, 10], [27, 70, 123], [1, 1, 1], cal[3], limbstartposition),
+            4: hexlimb.HexLimb(0x60, [0, 1, 2], [27, 70, 123], [0, 0, 0], cal[4], limbstartposition),
+            5: hexlimb.HexLimb(0x60, [4, 5, 6], [27, 70, 123], [0, 0, 0], cal[5], limbstartposition),
+            6: hexlimb.HexLimb(0x60, [8, 9, 10], [27, 70, 123], [0, 0, 0], cal[6], limbstartposition),
         }
 
         self.limbs[1].side = 'left'
@@ -34,152 +34,97 @@ class HexModel(object):
         self.position = [0, 0, 0]
         print("HexModel initialized")
 
-    class rapidMoveLimbT(threading.Thread):
-        def __init__(self, threadID, limb, targetPosition):
+    class RapidMoveLimbT(threading.Thread):
+        def __init__(self, threadid, limb, targetposition):
             threading.Thread.__init__(self)
-            self.threadID = threadID
+            self.threadid = threadid
             self.limb = limb
-            self.targetPosition = targetPosition
+            self.targetposition = targetposition
 
         def run(self):
-            self.limb.rapidMove(self.targetPosition)
+            self.limb.rapidmove(self.targetposition)
 
-    class linearMoveLimbT(threading.Thread):
-        def __init__(self, threadID, limb, targetPosition, precision, maxAngleVar):
+    class LinearMoveLimbT(threading.Thread):
+        def __init__(self, threadid, limb, targetposition, precision, maxanglevar):
             threading.Thread.__init__(self)
-            self.threadID = threadID
+            self.threadid = threadid
             self.limb = limb
-            self.targetPosition = targetPosition
+            self.targetposition = targetposition
             self.precision = precision
-            self.maxAngleVar = maxAngleVar
+            self.maxanglevar = maxanglevar
 
         def run(self):
-            self.limb.linearMove(self.targetPosition, self.precision, self.maxAngleVar, 200)
+            self.limb.linearmove(self.targetposition, self.precision, self.maxanglevar, 200)
 
-    def powerOff(self):
-        for limbIndex, limb in self.limbs.items():
-            limb.powerOff()
+    def poweroff(self):
+        for limbindex, limb in self.limbs.items():
+            limb.poweroff()
 
-    def powerOn(self):
-        for limbIndex, limb in self.limbs.items():
-            limb.powerOn()
+    def poweron(self):
+        for limbindex, limb in self.limbs.items():
+            limb.poweron()
 
-    def stepLimbsSequence(self, indexSequenceArray, wait=1):
-        for limbIndex in indexSequenceArray:
-            self.limbs[limbIndex].doStep(wait)
+    def steplimbssequence(self, indexSequenceArray, wait=1):
+        for limbindex in indexSequenceArray:
+            self.limbs[limbindex].doStep(wait)
 
-    def stretchLimbs(self):
-        for limbIndex, limb in self.limbs.items():
+    def stretchlimbs(self):
+        for limbindex, limb in self.limbs.items():
             if not limb.stretch():
                 return False
         return True
 
-    def stretchUp(self, wait=1):
-        for limbIndex, limb in self.limbs.items():
-            limb.stretchUp()
+    def standposition(self):
+        for limbindex, limb in self.limbs.items():
+            limb.defaultposition()
 
+    def steplimbindex(self, limbindex, wait=1):
+        self.limbs[limbindex].bendfemur(60)
+        self.limbs[limbindex].bendhip(60)
         time.sleep(wait)
-        self.standPosition()
-
-    def stretchDown(self, wait=1):
-        for limbIndex, limb in self.limbs.items():
-            limb.stretchDown()
-
+        self.limbs[limbindex].bendfemur(-60)
         time.sleep(wait)
-        self.standPosition()
-
-    def stretchFront(self, wait=1):
-        for limbIndex, limb in self.limbs.items():
-            limb.stretchFront()
-
-        time.sleep(wait)
-        self.standPosition()
-
-    def stretchBack(self, wait=1):
-        for limbIndex, limb in self.limbs.items():
-            limb.stretchBack()
-
-        time.sleep(wait)
-        self.standPosition()
-
-    def contract(self, wait=1):
-        for limbIndex, limb in self.limbs.items():
-            limb.contract()
-
+        self.limbs[limbindex].bendhip(-60)
         time.sleep(wait)
 
-    def stretchAll(self, wait=1):
-        self.contract()
-        self.stretchFront()
-        self.stretchBack()
-        self.stretchDown()
-        self.stretchUp()
-
-    def standPosition(self):
-        for limbIndex, limb in self.limbs.items():
-            limb.defaultPosition()
-
-    def stepLimbIndex(self, limbIndex, wait=1):
-        self.limbs[limbIndex].bendFemur(60)
-        self.limbs[limbIndex].bendHip(60)
-        time.sleep(wait)
-        self.limbs[limbIndex].bendFemur(-60)
-        time.sleep(wait)
-        self.limbs[limbIndex].bendHip(-60)
-        time.sleep(wait)
-
-    def rotateBody(self, wait=1):
-        self.limbs[1].stepRotatedBack(80, 30, False)
-        self.limbs[6].stepRotatedFront(80, 30, False)
-        time.sleep(wait)
-        self.limbs[3].stepRotatedBack(80, 30, False)
-        self.limbs[4].stepRotatedFront(80, 30, False)
-        self.limbs[1].stepRotatedFront(80, 30, True)
-        self.limbs[6].stepRotatedBack(80, 30, True)
-        time.sleep(wait)
-        self.limbs[3].stepRotatedFront(80, 30, True)
-        self.limbs[4].stepRotatedBack(80, 30, True)
-        self.limbs[1].stepRotatedBack(80, 30, False)
-        self.limbs[6].stepRotatedFront(80, 30, False)
-
-    def startThreadsArray(self, threadsArray):
-        for thread in threadsArray:
+    def startthreadsarray(self, threadsarray):
+        for thread in threadsarray:
             thread.start()
 
-    def waitForThreadsArray(self, threadsArray):
-        for thread in threadsArray:
+    def waitforthreadsarray(self, threadsarray):
+        for thread in threadsarray:
             thread.join()
 
-    def sumVectors(self, vector1, vector2):
+    def sumvectors(self, vector1, vector2):
         v1 = np.array(vector1)
         v2 = np.array(vector2)
         return v1 + v2
 
-    def tripodGait(self, dispVector, maxAngleVar=1):
+    def tripodgait(self, dispvector, maxanglevar=1):
         dispvector = np.array(dispvector)
-        halfDispVector = dispvector / 2.0
-        clearanceVector = np.array([0, 0, 30])
+        halfdispvector = dispvector / 2.0
+        clearancevector = np.array([0, 0, 30])
 
         tripod1 = [1, 3, 5]
         tripod2 = [2, 4, 6]
 
         try:
             # Gait Sequence
-            self.moveLimbs(tripod1, (halfDispVector + clearanceVector), False)  #Lift limbs 1,3,5
+            self.movelimbs(tripod1, (halfdispvector + clearancevector), False)  #Lift limbs 1,3,5
             #time.sleep(2)
-            self.moveLimbs(tripod1, (halfDispVector - clearanceVector), False)
+            self.movelimbs(tripod1, (halfdispvector - clearancevector), False)
             #time.sleep(2)
-            self.moveLimbs(tripod2, (halfDispVector + clearanceVector), False)
+            self.movelimbs(tripod2, (halfdispvector + clearancevector), False)
             #time.sleep(2)
-            self.moveLimbs(tripod1, (-dispvector), True)
+            self.movelimbs(tripod1, (-dispvector), True)
             #time.sleep(2)
-            self.moveLimbs(tripod2, (halfDispVector - clearanceVector), False)
+            self.movelimbs(tripod2, (halfdispvector - clearancevector), False)
             #time.sleep(2)
-            self.moveLimbs(tripod1, (clearanceVector), False)
+            self.movelimbs(tripod1, (clearancevector), False)
             #time.sleep(2)
-            self.moveLimbs(tripod2, (-dispvector), True)
+            self.movelimbs(tripod2, (-dispvector), True)
             #time.sleep(2)
-            self.moveLimbs(tripod1, (-clearanceVector), False)
+            self.movelimbs(tripod1, (-clearancevector), False)
             #time.sleep(2)
 
         finally:
@@ -187,99 +132,99 @@ class HexModel(object):
             print('Reposition all limbs in starting position')
 
 
-    def moveLimbs(self, arrayLimbs, dispVector, interpMove=True, maxAngleVar=3, precision=0.5):
+    def movelimbs(self, arraylimbs, dispvector, interpmove=True, maxanglevar=3, precision=0.5):
         #Moves a set of limbs to a targetPosition (x,y,z)
         threads = []
         #Iterates ALL limbs to approximate desired target position
-        for limbIndex in arrayLimbs:
-            limb = self.limbs[limbIndex]
-            limbDispVector = list(dispVector)  #Copy by value
-            #print('limbDispVector:',limbDispVector)
+        for limbindex in arraylimbs:
+            limb = self.limbs[limbindex]
+            limbdispvector = list(dispvector)  #Copy by value
+            #print('limbdispvector:',limbdispvector)
             if limb.side == 'left':
-                limbDispVector[0] = -limbDispVector[0]
-            #print('Limb#%s (%s), moving to: %s',(limbIndex, limb.side, limbDispVector))    
-            limbTargetPosition = self.sumVectors(limb.getPosition(), limbDispVector)
-            if interpMove:
-                threads.append(self.linearMoveLimbT(limbIndex, limb, limbTargetPosition, precision, maxAngleVar))
+                limbdispvector[0] = -limbdispvector[0]
+            #print('Limb#%s (%s), moving to: %s',(limbindex, limb.side, limbdispvector))
+            limbtargetposition = self.sumvectors(limb.getposition(), limbdispvector)
+            if interpmove:
+                threads.append(self.LinearMoveLimbT(limbindex, limb, limbtargetposition, precision, maxanglevar))
             else:
-                threads.append(self.rapidMoveLimbT(limbIndex, limb, limbTargetPosition))
+                threads.append(self.RapidMoveLimbT(limbindex, limb, limbtargetposition))
 
-        self.startThreadsArray(threads)
-        self.waitForThreadsArray(threads)
+        self.startthreadsarray(threads)
+        self.waitforthreadsarray(threads)
 
-    def positionLimbs(self, arrayLimbs, targetPosition, interpMove=True, maxAngleVar=2, precision=0.5):
+    def positionlimbs(self, arraylimbs, targetposition, interpmove=True, maxanglevar=2, precision=0.5):
         #Moves a set of limbs to a targetPosition (x,y,z)
         threads = []
         #Iterates ALL limbs to approximate desired target position
-        for limbIndex in arrayLimbs:
-            limb = self.limbs[limbIndex]
-            if interpMove:
-                threads.append(self.linearMoveLimbT(limbIndex, limb, targetPosition, precision, maxAngleVar))
+        for limbindex in arraylimbs:
+            limb = self.limbs[limbindex]
+            if interpmove:
+                threads.append(self.LinearMoveLimbT(limbindex, limb, targetposition, precision, maxanglevar))
             else:
-                threads.append(self.rapidMoveLimbT(limbIndex, limb, targetPosition))
+                threads.append(self.RapidMoveLimbT(limbindex, limb, targetposition))
 
-        self.startThreadsArray(threads)
-        self.waitForThreadsArray(threads)
+        self.startthreadsarray(threads)
+        self.waitforthreadsarray(threads)
 
-    def printLimbsPosition(self):
-        for limbIndex, limb in self.limbs.items():
-            coord = limb.getPosition()
-            print('Limb #%s x=%3.1f y=%3.1f z=%3.1f' % (limbIndex, coord[0], coord[1], coord[2]))
+    def printlimbsposition(self):
+        for limbindex, limb in self.limbs.items():
+            coord = limb.getposition()
+            print('Limb #%s x=%3.1f y=%3.1f z=%3.1f' % (limbindex, coord[0], coord[1], coord[2]))
 
 
-    def setLimbOffsets(self, limbIndex, hipOffset=None, femurOffset=None, tibiaOffset=None):
-        if limbIndex not in self.limbs.keys():
-            print('Invalid limbIndex:%s' % limbIndex)
+    def setlimboffsets(self, limbindex, hipOffset=None, femurOffset=None, tibiaOffset=None):
+        if limbindex not in self.limbs.keys():
+            print('Invalid limbIndex:%s' % limbindex)
             return False
 
-        if not self.limbs[limbIndex].setOffsets(hipOffset, femurOffset, tibiaOffset):
-            print('Error applying offset values to limbIndex:%s' % limbIndex)
+        if not self.limbs[limbindex].setoffsets(hipOffset, femurOffset, tibiaOffset):
+            print('Error applying offset values to limbIndex:%s' % limbindex)
 
         #Saves current offset values
-        self._saveCalibration()
+        self._savecalibration()
 
-    def incLimbOffsets(self, limbIndex, hipOffset=None, femurOffset=None, tibiaOffset=None):
-        if limbIndex not in self.limbs.keys():
-            print('Invalid limbIndex:%s' % limbIndex)
+    def inclimboffsets(self, limbindex, hipOffset=None, femurOffset=None, tibiaOffset=None):
+        if limbindex not in self.limbs.keys():
+            print('Invalid limbIndex:%s' % limbindex)
             return False
 
-        if not self.limbs[limbIndex].incOffsets(hipOffset, femurOffset, tibiaOffset):
-            print('Error incrementing offset values to limbIndex:%s' % limbIndex)
+        if not self.limbs[limbindex].incoffsets(hipOffset, femurOffset, tibiaOffset):
+            print('Error incrementing offset values to limbIndex:%s' % limbindex)
 
         #Saves current offset values
-        self._saveCalibration()
+        self._savecalibration()
 
-    def _loadCalibration(self):
+    def _loadcalibration(self):
         calibration = {}
         try:
-            file = open(self.calibrationFile, 'r')
-            limbsCalibration = json.load(file)
+            file = open(self.calibrationfile, 'r')
+            limbscalibration = json.load(file)
         except IOError:
             pass
         else:
-            print('Loading calibration file: %s' % self.calibrationFile)
-            for limbIndex, limb in limbsCalibration.iteritems():
-                calibration[int(limbIndex)] = ([int(limb['hip']), int(limb['femur']), int(limb['tibia'])])
+            print('Loading calibration file: %s' % self.calibrationfile)
+            for limbindex, limb in limbscalibration.iteritems():
+                calibration[int(limbindex)] = ([int(limb['hip']), int(limb['femur']), int(limb['tibia'])])
 
         return calibration
 
-    def _loadAndApplyCalibration(self):
+    def _loadandapplycalibration(self):
         try:
-            file = open(self.calibrationFile, 'r')
-            limbsCalibration = json.load(file)
+            file = open(self.calibrationfile, 'r')
+            limbscalibration = json.load(file)
         except IOError:
             pass
         else:
-            print('Loading calibration file: %s' % self.calibrationFile)
-            for limbIndex, limb in limbsCalibration.iteritems():
-                self.limbs[int(limbIndex)].setOffsets(int(limb['hip']), int(limb['femur']), int(limb['tibia']))
+            print('Loading calibration file: %s' % self.calibrationfile)
+            for limbIndex, limb in limbscalibration.iteritems():
+                self.limbs[int(limbIndex)].setoffsets(int(limb['hip']), int(limb['femur']), int(limb['tibia']))
 
-    def _saveCalibration(self):
+    def _savecalibration(self):
         #Saves current offset value for set for each servo composing the limbs
-        limbsCalibration = {}
-        for limbIndex, limb in self.limbs.items():
-            auxCalib = {'hip': limb.hip.offset, 'femur': limb.femur.offset, 'tibia': limb.tibia.offset}
-            limbsCalibration[limbIndex] = auxCalib
+        limbscalibration = {}
+        for limbindex, limb in self.limbs.items():
+            auxcalib = {'hip': limb.hip.offset, 'femur': limb.femur.offset, 'tibia': limb.tibia.offset}
+            limbscalibration[limbindex] = auxcalib
 
-        with open(self.calibrationFile, 'w') as file:
-            json.dump(limbsCalibration, file)
+        with open(self.calibrationfile, 'w') as file:
+            json.dump(limbscalibration, file)

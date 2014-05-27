@@ -30,7 +30,7 @@ screen.keypad(True)
 screen.addstr(0,0, 'X:')
 screen.addstr(1,0, 'Y:')
 
-pata=hexlimb.HexLimb(0x40, 70, 125, True, True)
+pata=hexlimb.HexLimb(0x40, 70, 125, True, True, [140, 0, -39])
 updDisplay(pata, 0, 0)
 
 inc=10
