@@ -31,14 +31,14 @@ class HexLimb(object):
         self.calcposition()
 
     def poweroff(self):
-        self.hip.powerOff()
-        self.femur.powerOff()
-        self.tibia.powerOff()
+        self.hip.poweroff()
+        self.femur.poweroff()
+        self.tibia.poweroff()
 
     def poweron(self):
-        self.hip.powerOn()
-        self.femur.powerOn()
-        self.tibia.powerOn()
+        self.hip.poweron()
+        self.femur.poweron()
+        self.tibia.poweron()
 
     def getposition(self):
         return [self.x, self.y, self.z]
