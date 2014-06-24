@@ -1,3 +1,6 @@
 [submodule "InverseKinematics"]
 	path = InverseKinematics
 	url = https://github.com/Heliobteixeira/InverseKinematics.git
+[submodule "Kinematics"]
+	path = Kinematics
+	url = git@github.com:Heliobteixeira/Kinematics.git
