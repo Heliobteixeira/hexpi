@@ -1,7 +1,6 @@
 import sys
 ##import numpy as np
 from hexbone import HexBone
-from InverseKinematics import ik
 import math
 from time import sleep
 
@@ -26,8 +25,6 @@ class HexLimb(object):
         self.origin = [0, 0, 0]  #Correct this along the code and include as parameter of __init__
         self.startposition = startposition
         #Reset servo positions after servo calibration
-        self.x, self.y, self.z = 0, 0, 0
-        self.defaultposition()
         self.calcposition()
 
     def poweroff(self):
@@ -106,6 +103,7 @@ class HexLimb(object):
 
         return success
 
+
     def incoffsets(self, hipoffset=None, femuroffset=None, tibiaoffset=None):
         success = True
         if hipoffset is not None:
@@ -122,11 +120,13 @@ class HexLimb(object):
 
         return success
 
+
     def printposition(self):
         print(' Hip: %2.1f   | Femur: %2.1f    | Tibia: %2.1f    |  x=%.2f;y=%.2f;z=%.2f' % (self.getnorhipangle(),
                                                                                              self.getnorfemurangle(),
                                                                                              self.getnortibiaangle(),
                                                                                              self.x, self.y, self.z))
+
 
     def calcposition(self):
         #Callback function (when setAngle is called) to update tip position
@@ -149,8 +149,16 @@ class HexLimb(object):
         else:
             return True
 
-    def bendlimbjoints(self, hipbendangle, femurbendangle, tibiabendangle):
-        #Bends Femur and Tibia simultaneously
+    def setjoints(self, hipangle, femurangle, tibiaangle):
+        #Sets Hip, Femur and Tibia angles simultaneously
+        if self.sethipangle(hipangle) and self.setfemurangle(femurangle) and self.settibiaangle(
+                tibiaangle):
+            return True
+        else:
+            return False
+
+    def bendjoints(self, hipbendangle, femurbendangle, tibiabendangle):
+        #Bends Hip, Femur and Tibia simultaneously
         if self.checkhipbend(hipbendangle) and self.checkfemurbend(femurbendangle) and self.checktibiabend(
                 tibiabendangle):
             self.bendhip(hipbendangle)
@@ -160,119 +168,13 @@ class HexLimb(object):
         else:
             return False
 
-    def distto(self, x, y, z):
-        return math.sqrt((x - self.x) ** 2 + (y - self.y) ** 2 + (z - self.z) ** 2)
-
-    def iteratehipfemurtibiabend(self, targetPosition, maxAngleDisp):
-        """
-
-        :rtype : object
-        """
-        origin = [0, 0, 0]
-        L1 = self.hip.length
-        L2 = self.femur.length
-        L3 = self.tibia.length
-        alpha = math.radians(self.getnorhipangle())
-        beta = math.radians(self.getnorfemurangle())
-        gamma = math.radians(self.getnortibiaangle())
-        (deltaHip, deltaFemur, deltaTibia) = ik.ikJacobian3DOF(L1, L2, L3, alpha, beta, gamma, origin, targetPosition)
-        (deltaHip, deltaFemur, deltaTibia) = (
-            math.degrees(deltaHip), math.degrees(deltaFemur), math.degrees(deltaTibia))
-
-        currMaxAngle = max(abs(deltaHip), abs(deltaFemur), abs(deltaTibia))
-
-        if currMaxAngle > maxAngleDisp:
-            fact = maxAngleDisp / currMaxAngle
-            (deltaHip, deltaFemur, deltaTibia) = (deltaHip * fact, deltaFemur * fact, deltaTibia * fact)
-
-        ##print('Bend Angles: Hip: %s, Femur:%s, Tibia:%s' % (deltaHip, deltaFemur, deltaTibia))
-        return (deltaHip, deltaFemur, deltaTibia)
-
-    def calculatehipfemurtibiabend(self, targetposition):
-        origin = [0, 0, 0]
-        L1 = self.hip.length
-        L2 = self.femur.length
-        L3 = self.tibia.length
-
-        ## Fetching current angles position:
-        startAlpha = math.radians(self.getnorhipangle())
-        startBeta = math.radians(self.getnorfemurangle())
-        startGamma = math.radians(self.getnortibiaangle())
-
-        ## Calculating final angles position:
-        (endalpha, endbeta, endgamma) = ik.ikAnalytical3DOF(L1, L2, L3, origin, targetposition)
-
-        deltaalpha = math.degrees(endalpha - startAlpha)
-        deltabeta = math.degrees(endbeta - startBeta)
-        deltagamma = math.degrees(endgamma - startGamma)
-
-        #print('Will rotate:'+str((deltaalpha, deltabeta, deltaGamma)))
-        return (deltaalpha, deltabeta, deltagamma)
-
-    def rapidmove(self, targetposition):
-        #Moves a set of limbs to a targetPosition (x,y)
-        x, y, z = targetposition
-
-        #Calculates necessary bend angle for current iteration
-        (deltahip, deltafemur, deltatibia) = self.calculatehipfemurtibiabend(targetposition)
-
-        #Checks if move is successful 
-        if not self.bendlimbjoints(deltahip, deltafemur, deltatibia):
-            print(
-                'Error trying to bend limb. Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (
-                deltahip, deltafemur, deltatibia))
-            return False
-        else:
-            #Calculates current distance to target position
-            currentDistance = self.distto(x, y, z)
-            ##self.limbs[limbIndex].printPosition()
-            #print('Target position reached. Current distance: %s' % currentDistance)
-            ##print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltahip, deltaFemur, deltatibia, currentDistance))
-            return True
-
-    def linearmove(self, targetposition, precision=0.5, maxanglevar=2, maxiterations=500):
-        #Moves limbs to a targetPosition (x,y)
-        i = 0
-        x, y, z = targetposition
-
-        #Calculate current Distance to target Position
-        currentdistance = self.distto(x, y, z)
-
-        lastmovefine = True
-        while currentdistance > precision and i < maxiterations and lastmovefine:
-            i += 1
-            #Calculates necessary bend angle for current iteration
-            (deltahip, deltafemur, deltatibia) = self.iteratehipfemurtibiabend(targetposition, maxanglevar)
-
-            #Checks if move is successful 
-            if not self.bendlimbjoints(deltahip, deltafemur, deltatibia):
-                print('Error trying to bend limb Hip: %s, Femur Bend: %s, Tibia Bend: %s' % (
-                    deltahip, deltafemur, deltatibia))
-                lastmovefine = False
-            else:
-                #Calculates current distance to target position
-                currentdistance = self.distto(x, y, z)
-                ##                    self.printPosition()
-                ##                    print('Distance:%s' % currentdistance)
-                ##                    print('Hip;Femur;Tibia Bend: %s;%s;%s Distance: %s' % (deltahip, deltafemur, deltatibia, currentdistance))
-
-        if currentdistance <= precision:
-            #print('Target position reached. Current distance: %s Iterations: %s' % (currentdistance, i))
-            return True
-        else:
-            print('Unable to reach target position. Current distance %s' % currentdistance)
-            print('Iterations: %s' % i)
-            if not lastmovefine:
-                print('Could not make a movement. Limits reached?')
-            return False
 
 
     def updatepositions(self):
+        self.sethipangle(self.hip.angle)
         self.setfemurangle(self.femur.angle)
         self.settibiaangle(self.tibia.angle)
 
-    def defaultposition(self):
-        self.rapidmove(self.startposition)
 
     def stretch(self):
         #Stretchs the Limbs granting that it will do it in the air whitout touching the ground

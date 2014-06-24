@@ -148,7 +148,7 @@ class Servo(object):
         else:
             pwmvalue = self._convangletopwm(offsetAngle)
             self._setpwm(pwmvalue)
-            self.angle = angle  # Sets the original non offseted angle >>CONFIRM
+            self.angle = float(angle)  # Sets the original non offseted angle >>CONFIRM
             if self.callback is not None: self.callback()
             return True
 
@@ -178,7 +178,7 @@ class Servo(object):
             return True
 
     def incangle(self, angleinc):
-        return self.setangle(self.calcanglefrominc(angleinc))
+        return self.setangle(self.calcanglefrominc(float(angleinc)))
 
     @property
     def getangle(self):
