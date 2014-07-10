@@ -105,6 +105,7 @@ class HexEngine(object):
         return math.sqrt((x - limb.x) ** 2 + (y - limb.y) ** 2 + (z - limb.z) ** 2)
 
     def tripodgait(self, dispvector, maxanglevar=1):
+        # This function is obsolete, and will be refactored. 
         dispvector = np.array(dispvector)
         halfdispvector = dispvector / 2.0
         clearancevector = np.array([0, 0, 30])
@@ -274,7 +275,11 @@ class HexEngine(object):
                 print('Could not make a movement. Limits reached?')
             return False
 
+    def startgait(self):
+        
+
     def updategait(self):
+        # Call this method in regular intervals to update gait
         if self.gaitstep>=self.nbrgaitsteps-1:
             print('New cycle')
             self.gaitstep=0
@@ -285,24 +290,35 @@ class HexEngine(object):
             (coxaangle, femurangle, tibiaangle)=self.limbspathangles[limbindex][self.gaitstep]
             limb.setjoints(coxaangle, femurangle, tibiaangle)
 
-    def loadtripodgaitpaths (self, steplength):
-        # Stance movement: foot is in contact with the ground
-        # Swing movement: foot is lifted and moved forwards
-        stepamplitude=steplength/2 
-        liftheight=30 # How far the limb will go up to swing
-        nbrstepsperphase=15 # More steps equal more smooth movement
+    def loadwavegaitpaths (self, gaitvector, seq=[1,2,3,4,5,6], liftvector=[0,0,30], phasenbrsteps=15):
+        """Loads global variable with the gait points for each limb
+        
+        Keyword arguments:
+        gaitvector -- vector path followed by hex, each cycle
+        seq        -- sequence of limbs movement
+        liftvector -- vector path when raising limbs
+        phasenbrsteps -- total number of steps = 6 x phasenbrsteps
+                         greater phasenbrsteps equals greater precision and less speed
+        """
+        gaitvector=np.array(gaitvector)
+        liftvector=np.array(liftvector)
+
+        halfgaitvector=gaitvector/2 # Rounds to integer...meaningless
 
         # Stance (5/6 phases):
-        nbrstepsstance=nbrstepsperphase*5
+        nbrstepsstance=phasenbrsteps*5
 
         # Swing (1/6 phases):
         nbrstepslift=3
-        nbrstepsforward=nbrstepsperphase-(2*nbrstepslift)
+        nbrstepsforward=phasenbrsteps-(2*nbrstepslift)
 
         cyclelist=[] # List that will contain all angular solutions for each tick of limb movement
         self.nbrgaitsteps=2*nbrstepslift+nbrstepsforward+nbrstepsstance
 
-        for index, limb in self.hexmodel.limbs.items():
+        limbcount=0
+        for index in seq:
+            limb=self.hexmodel.limbs[index]
+
             pt={} # All end points of the limb movement
             self.limbspathangles[index]=[] # Unsets previous limb's paths 
 
@@ -313,10 +329,11 @@ class HexEngine(object):
             origin=limb.origin
 
             position=limb.getposition()
-            pt['backdown']=[position[0], position[1]-stepamplitude, position[2]]
-            pt['backup']=[position[0], position[1]-stepamplitude, position[2]+liftheight]
-            pt['forwup']=[position[0], position[1]+stepamplitude, position[2]+liftheight]
-            pt['forwdown']=[position[0], position[1]+stepamplitude, position[2]]
+            pt['backdown']=position-halfgaitvector
+            pt['backup']=position-halfgaitvector+liftvector
+            pt['forwup']=position+halfgaitvector+liftvector
+            pt['forwdown']=position+halfgaitvector
+
             
             # Creation of the cycle
             self.limbspathangles[index]=CyclicList()
@@ -341,8 +358,9 @@ class HexEngine(object):
                                                                         nbrstepsstance))  # Stance back
 
             # Finally performs the necessary phase shift of the list
-            # limbindex 1 will have no shift; index 2 will shift 1x[nbrstepsperphase]; index 3 will shift 2x[nbrstepsperphase];
-            self.limbspathangles[index].setindexzero((index-1)*nbrstepsperphase)
+            # limbindex 1 will have no shift; index 2 will shift 1x[phasenbrsteps]; index 3 will shift 2x[phasenbrsteps];
+            self.limbspathangles[index].setindexzero((limbcount-1)*nbrstepsperphase)
+            limbcount+=1 # increments counter
 
 
         ##self.printpaths()
