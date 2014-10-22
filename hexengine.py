@@ -146,7 +146,7 @@ class HexEngine(object):
             limbdispvector = list(dispvector)  # Copy by value
             #print('limbdispvector:',limbdispvector)
             if limb.side == 'left':
-                limbdispvector[0] = -limbdispvector[0]
+                limbdispvector[0] = -limbdispvector[0] 
             #print('Limb#%s (%s), moving to: %s',(limbindex, limb.side, limbdispvector))
             limbtargetposition = self.sumvectors(limb.getposition(), limbdispvector)
             if interpmove:
@@ -275,7 +275,7 @@ class HexEngine(object):
                 print('Could not make a movement. Limits reached?')
             return False
 
-    def startgait(self):
+#    def startgait(self):
         
 
     def updategait(self):
@@ -290,7 +290,7 @@ class HexEngine(object):
             (coxaangle, femurangle, tibiaangle)=self.limbspathangles[limbindex][self.gaitstep]
             limb.setjoints(coxaangle, femurangle, tibiaangle)
 
-    def loadwavegaitpaths (self, gaitvector, seq=[1,2,3,4,5,6], liftvector=[0,0,30], phasenbrsteps=15):
+    def loadwavegaitpaths (self, gaitvector, seq=(1,2,3,4,5,6), liftvector=(0,0,30), phasenbrsteps=10):
         """Loads global variable with the gait points for each limb
         
         Keyword arguments:
@@ -300,6 +300,14 @@ class HexEngine(object):
         phasenbrsteps -- total number of steps = 6 x phasenbrsteps
                          greater phasenbrsteps equals greater precision and less speed
         """
+        if type(gaitvector) is not tuple:
+            print "The gaitvector is invalid! <break>"
+            return False
+
+        if type(liftvector) is not tuple:
+            print "The liftvector is invalid! <break>"
+            return False
+
         gaitvector=np.array(gaitvector)
         liftvector=np.array(liftvector)
 
@@ -327,8 +335,18 @@ class HexEngine(object):
             femurlength=limb.femur.length
             tibialength=limb.tibia.length
             origin=limb.origin
-
             position=limb.getposition()
+
+            halfgaitvector=gaitvector/2
+            if limb.side == 'left':
+                halfgaitvector[0] = -halfgaitvector[0]
+            elif limb.side == 'right':
+                pass
+            else:
+                print "Left/Right limb side unknown! <break>"
+                return False
+
+
             pt['backdown']=position-halfgaitvector
             pt['backup']=position-halfgaitvector+liftvector
             pt['forwup']=position+halfgaitvector+liftvector
@@ -359,11 +377,68 @@ class HexEngine(object):
 
             # Finally performs the necessary phase shift of the list
             # limbindex 1 will have no shift; index 2 will shift 1x[phasenbrsteps]; index 3 will shift 2x[phasenbrsteps];
-            self.limbspathangles[index].setindexzero((limbcount-1)*nbrstepsperphase)
+            self.limbspathangles[index].setindexzero((limbcount)*phasenbrsteps)
             limbcount+=1 # increments counter
 
 
-        ##self.printpaths()
+        #self.printpaths()
+
+    def patharraysloaded(self):
+        """Checks if the there are any paths loaded for any member"""
+
+        try:
+            for limbindex, patharray in self.limbspathangles.items():
+                if len(patharray)>0:
+                    return True
+        except:
+            return False            
+
+        return False
+
+    def positionmembersforgaitstart(self):
+        for limbindex, patharray in self.limbspathangles.items():
+            self.movelimbs([limbindex], [0,0,20])
+            (coxaangle, femurangle, tibiaangle)=patharray[0]
+            self.hexmodel.limbs[limbindex].setjoints(coxaangle, femurangle, tibiaangle)
+
+    def startgait(self):
+        """Starts the loaded gait and interrupts on Ctrl-C"""
+        if not patharraysloaded():
+            print 'Cannot initiate gait start: Paths not loaded!'
+            return False
+
+        try:
+            while True:
+                self.updategait()
+                #time.sleep(0.01)
+
+        except KeyboardInterrupt:
+            pass
+
+        # TODO: finally: reposiciona as patas na posicao inicial
+
+        return True
+
+    def startmarch(self):
+        """Starts looped march test in the same spot"""
+
+        # TODO: Será necessário um delay entre moveLimbsTipsTo() ??
+        try:
+            while True:
+                m.moveLimbsTipTo([1, 2, 3, 4, 5, 6], [80, -42])
+                m.moveLimbsTipTo([1, 2, 3, 4, 5, 6], [80, -140])
+                m.moveLimbsTipTo([1, 2, 3, 4, 5, 6], [80, -42])
+                m.moveLimbsTipTo([1, 3, 5], [80, -140])
+                m.moveLimbsTipTo([1, 3, 5], [80, -42])
+                m.moveLimbsTipTo([2, 4, 6], [80, -140])
+                m.moveLimbsTipTo([2, 4, 6], [80, -42])
+                m.moveLimbsTipTo([1, 2, 3, 4, 5, 6], [80, -35])
+                #time.sleep(0.01)
+
+        except KeyboardInterrupt:
+            pass
+
+        return True
 
     def printpaths(self):
         

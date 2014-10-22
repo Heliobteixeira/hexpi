@@ -7,10 +7,11 @@ import time
 
 def main():
     m = hexmodel.HexModel()
-    m.engine.loadtripodgaitpaths(70)
-    while True:
-    	m.engine.updategait()
-    	#time.sleep(0.01)
+    m.engine.loadwavegaitpaths((80, 80, 0))
+    #m.engine.positionmembersforgaitstart()
+    #pdb.set_trace()
+    m.engine.startgait()
+
 
     pdb.set_trace()
 
