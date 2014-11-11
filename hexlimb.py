@@ -7,7 +7,8 @@ from time import sleep
 
 class HexLimb(object):
     ##Reformular com base nas alteracoes da classe Servo
-    def __init__(self, I2C_ADDRESS, boneschannelsarray, boneslengtharray, revarray, offsetarray, startposition):
+    def __init__(self, I2C_ADDRESS, boneschannelsarray, boneslengtharray, revarray, offsetarray, origin):
+        # TODO: Set limb starting position accordingly to init vars
         #0->Hip;1->Femur;2->Tibia
 
         ## Hexbone's min/max default angles
@@ -23,9 +24,16 @@ class HexLimb(object):
                              offsetarray[2], defaultminangle, defaultmaxangle, self.calcposition)
 
         self.origin = [0, 0, 0]  #Correct this along the code and include as parameter of __init__
-        self.startposition = startposition
-        #Reset servo positions after servo calibration
-        self.calcposition()
+
+        self.x=None
+        self.y=None
+        self.z=None
+
+    def __repr__(self):
+        return ' Hip:{:> 6.1f} | Femur:{:> 6.1f} | Tibia:{:> 6.1f} | x={:> 6.1f} | y={:> 6.1f} | z={:> 6.1f} '.format(self.getnorhipangle(),
+                                                                                             self.getnorfemurangle(),
+                                                                                             self.getnortibiaangle(),
+                                                                                             self.x, self.y, self.z)
 
     def poweroff(self):
         self.hip.poweroff()
@@ -40,7 +48,7 @@ class HexLimb(object):
     def getposition(self):
         return [self.x, self.y, self.z]
 
-    ##Code hip movement functions
+    ## Femur
     def setfemurangle(self, angle):
         return self.femur.setangle(angle)
 
@@ -56,7 +64,7 @@ class HexLimb(object):
     def getnorfemurangle(self):
         return self.femur.angle
 
-
+    ## Tibia
     def settibiaangle(self, angle):
         return self.tibia.setangle(angle - 90)
 
@@ -72,6 +80,7 @@ class HexLimb(object):
     def getnortibiaangle(self):
         return 90 + self.tibia.angle
 
+    ## Hip
     def sethipangle(self, angle):
         return self.hip.setangle(angle)
 
@@ -87,6 +96,27 @@ class HexLimb(object):
     def getnorhipangle(self):
         return self.hip.angle
 
+    ## Hip + Femur + Tibia
+    def setjoints(self, hipangle, femurangle, tibiaangle):
+        #Sets Hip, Femur and Tibia angles simultaneously
+        if self.sethipangle(hipangle) and self.setfemurangle(femurangle) and self.settibiaangle(
+                tibiaangle):
+            return True
+        else:
+            return False
+
+    def bendjoints(self, hipbendangle, femurbendangle, tibiabendangle):
+        #Bends Hip, Femur and Tibia simultaneously
+        if self.checkhipbend(hipbendangle) and self.checkfemurbend(femurbendangle) and self.checktibiabend(
+                tibiabendangle):
+            self.bendhip(hipbendangle)
+            self.bendfemur(femurbendangle)
+            self.bendtibia(tibiabendangle)
+            return True
+        else:
+            return False
+
+    ## Offsets
     def setoffsets(self, hipoffset=None, femuroffset=None, tibiaoffset=None):
         success = True
         if hipoffset is not None:
@@ -103,7 +133,6 @@ class HexLimb(object):
 
         return success
 
-
     def incoffsets(self, hipoffset=None, femuroffset=None, tibiaoffset=None):
         success = True
         if hipoffset is not None:
@@ -119,14 +148,6 @@ class HexLimb(object):
                 success = False
 
         return success
-
-
-    def printposition(self):
-        print(' Hip: %2.1f   | Femur: %2.1f    | Tibia: %2.1f    |  x=%.2f;y=%.2f;z=%.2f' % (self.getnorhipangle(),
-                                                                                             self.getnorfemurangle(),
-                                                                                             self.getnortibiaangle(),
-                                                                                             self.x, self.y, self.z))
-
 
     def calcposition(self):
         #Callback function (when setAngle is called) to update tip position
@@ -149,49 +170,11 @@ class HexLimb(object):
         else:
             return True
 
-    def setjoints(self, hipangle, femurangle, tibiaangle):
-        #Sets Hip, Femur and Tibia angles simultaneously
-        if self.sethipangle(hipangle) and self.setfemurangle(femurangle) and self.settibiaangle(
-                tibiaangle):
-            return True
-        else:
-            return False
-
-    def bendjoints(self, hipbendangle, femurbendangle, tibiabendangle):
-        #Bends Hip, Femur and Tibia simultaneously
-        if self.checkhipbend(hipbendangle) and self.checkfemurbend(femurbendangle) and self.checktibiabend(
-                tibiabendangle):
-            self.bendhip(hipbendangle)
-            self.bendfemur(femurbendangle)
-            self.bendtibia(tibiabendangle)
-            return True
-        else:
-            return False
-
-
-
     def updatepositions(self):
         self.sethipangle(self.hip.angle)
         self.setfemurangle(self.femur.angle)
         self.settibiaangle(self.tibia.angle)
 
-
-    def stretch(self):
-        #Stretchs the Limbs granting that it will do it in the air whitout touching the ground
-        #TODO: Detect max femur and tibia angle permited to go
-        if not self.femur.setangletominormax(1):
-            return False
-        else:
-            sleep(1)
-        if not self.tibia.setangletominormax(-1):
-            return False
-        else:
-            sleep(1)
-        if not self.setfemurangle(0):
-            return False
-        else:
-            sleep(1)
-            return True
         
         
         
