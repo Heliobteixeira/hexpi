@@ -6,6 +6,21 @@ from hexlimb import HexLimb
 from hexengine import HexEngine
 
 class HexModel(object):
+    """
+    Servo positions:
+
+       [1] ________ [4]
+          /   y    \
+         /    ^     \
+        |     |      |
+    [2] |      --> x | [5]
+        |            |
+         \          /
+          \________/  
+       [3]        [6]
+    
+    """
+
     def __init__(self):
         limbstartposition = [120, 0, -30]
 
@@ -25,12 +40,18 @@ class HexModel(object):
         self.limbs[3].side = 'left'
         self.limbs[4].side = 'right'
         self.limbs[5].side = 'right'
-        self.limbs[6].side = 'right'
+        self.limbs[6].side = 'right'       
 
         # Initializing the Engine:
         self.engine=HexEngine(self)
 
         print("HexModel initialized")
+
+    def __repr__(self):
+        output = "Hexmodel Limbs:"
+        for (limbindex, limb) in self.limbs.items():
+            output+="\n"+str(limb)
+        return output
 
     def poweroff(self):
         for limbindex, limb in self.limbs.items():
