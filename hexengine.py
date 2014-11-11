@@ -3,6 +3,8 @@ import numpy as np
 import time
 import threading
 import math
+import sys
+import pdb
 from Kinematics import ik
 
 import pprint
@@ -24,14 +26,30 @@ class HexEngine(object):
         self.LAMBDA = 200  # 20<LAMBDA<50
         self.maxIterations = 500
 
+        # Hip angles for stable position
+        self.standhipangles = { 1:45,
+                                2:0,
+                                3:-45,
+                                4:45,
+                                5:0,
+                                6:-45,
+        }
+
         # Limbs Angles Set List
         self.limbspathangles={}
+
+        self.hexmodel.limbs[1].lastposition = None
+        self.hexmodel.limbs[2].lastposition = None
+        self.hexmodel.limbs[3].lastposition = None
+        self.hexmodel.limbs[4].lastposition = None
+        self.hexmodel.limbs[5].lastposition = None
+        self.hexmodel.limbs[6].lastposition = None 
 
         self.nbrgaitsteps=0 # Total number of calculated gait steps
         self.gaitstep=0 # Step counter
 
-        for limbindex, limb in self.hexmodel.limbs.items():
-            self.rapidmove(limb, limb.startposition)
+        self.standup()
+        self.powered = True
 
     class RapidMoveLimbT(threading.Thread):
         def __init__(self, threadid, rapidmove, limb, targetposition):
@@ -71,11 +89,6 @@ class HexEngine(object):
         return True
 
 
-    def standposition(self):
-        for limbindex, limb in self.hexmodel.limbs.items():
-            limb.defaultposition()
-
-
     def steplimbindex(self, limbindex, wait=1):
         self.hexmodel.limbs[limbindex].bendfemur(60)
         self.hexmodel.limbs[limbindex].bendhip(60)
@@ -103,6 +116,15 @@ class HexEngine(object):
 
     def distto(self, limb, x, y, z):
         return math.sqrt((x - limb.x) ** 2 + (y - limb.y) ** 2 + (z - limb.z) ** 2)
+
+    def midpoint(self, p0, p1):
+        if not len(p0)==len(p1):
+            sys.exit("Error trying to find middle point of two non dimensionally equally points")
+
+        p0=np.array(p0) 
+        p1=np.array(p1)
+
+        return list((p0+p1)/2)
 
     def tripodgait(self, dispvector, maxanglevar=1):
         # This function is obsolete, and will be refactored. 
@@ -244,7 +266,7 @@ class HexEngine(object):
         listofangularinc=self.iteratehipfemurtibiabend(limb, targetposition, maxanglevar)
 
         lastmovefine = True
-        print('Nbr of items:', len(listofangularinc))
+        #print('Nbr of items:', len(listofangularinc))
         for angularinc in listofangularinc:
             i += 1
             #Calculates necessary bend angle for current iteration
@@ -259,7 +281,7 @@ class HexEngine(object):
             else:
                 #Calculates current distance to target position
                 currentdistance = self.distto(limb, x, y, z)
-                print('CurrentDistance:',currentdistance)
+                #print('CurrentDistance:',currentdistance)
                 continue ## ! Gotos directly to the begining of loop
 ##		        ## limb.printPosition()
 ##		        ## print('Distance:%s' % currentdistance)
@@ -277,7 +299,72 @@ class HexEngine(object):
 
 #    def startgait(self):
         
+    def quadraticmove(self, limb, p1, p2, nbrsteps=50, delay=0):
+        """ 
+        Moves limb along a quadratic bezier curve 
 
+        Keyword arguments:
+        limb - of type HexLimb
+        p1 - middle point of bezier curve
+        p2 - end point of bezier curve
+        nbrsteps - total number of points of curve
+        delay - interval in seconds between each incremental move 
+        """
+        coxalength=limb.hip.length
+        femurlength=limb.femur.length
+        tibialength=limb.tibia.length
+        origin=limb.origin
+        p0=limb.getposition()
+        
+        limbspathangles=[]
+        limbspathangles=ik.generatequadraticpath(coxalength, femurlength, tibialength, origin, p0, p1, p2, nbrsteps)
+        #pdb.set_trace()
+        for positionrow in limbspathangles:
+            (jointsangles, position)=positionrow
+            (coxaangle, femurangle, tibiaangle)=jointsangles
+            limb.setjoints(coxaangle, femurangle, tibiaangle)
+            time.sleep(delay)
+
+    def standup(self):
+        print('Starting standup...')
+        # Raise femurs
+        for limbindex, limb in self.hexmodel.limbs.items():
+            limb.setfemurangle(85)
+        time.sleep(0.5) # Wait for servo to reach its position
+        #pdb.set_trace()
+        # Retract tibias
+        for limbindex, limb in self.hexmodel.limbs.items():
+            limb.settibiaangle(140)
+        time.sleep(0.5) # Wait for servo to reach its position
+        #pdb.set_trace()
+        # Position hips at stable angles
+        for limbindex, limb in self.hexmodel.limbs.items():
+            limb.sethipangle(self.standhipangles[limbindex])
+        time.sleep(1)
+
+        self.movelimbs([1,2,3,4,5,6], [0,0,-60], interpmove=True, maxanglevar=1, precision=0.5)
+
+        print('...Finished standup')
+
+
+    """
+    def stretch(self):
+        #Stretchs the Limbs granting that it will do it in the air whitout touching the ground
+        #TODO: Detect max femur and tibia angle permited to go
+        if not self.femur.setangletominormax(1):
+            return False
+        else:
+            time.sleep(1)
+        if not self.tibia.setangletominormax(-1):
+            return False
+        else:
+            time.sleep(1)
+        if not self.setfemurangle(0):
+            return False
+        else:
+            time.sleep(1)
+            return True
+    """
     def updategait(self):
         # Call this method in regular intervals to update gait
         if self.gaitstep>=self.nbrgaitsteps-1:
@@ -287,7 +374,8 @@ class HexEngine(object):
             self.gaitstep+=1
 
         for limbindex, limb in self.hexmodel.limbs.items():
-            (coxaangle, femurangle, tibiaangle)=self.limbspathangles[limbindex][self.gaitstep]
+            (jointsangles, position)=self.limbspathangles[limbindex][self.gaitstep]
+            (coxaangle, femurangle, tibiaangle)=jointsangles
             limb.setjoints(coxaangle, femurangle, tibiaangle)
 
     def loadwavegaitpaths (self, gaitvector, seq=(1,2,3,4,5,6), liftvector=(0,0,30), phasenbrsteps=10):
@@ -355,22 +443,22 @@ class HexEngine(object):
             
             # Creation of the cycle
             self.limbspathangles[index]=CyclicList()
-            self.limbspathangles[index].extend(ik.getjointanglesforpath(coxalength, femurlength, tibialength, 
+            self.limbspathangles[index].extend(ik.generatelinearpath(coxalength, femurlength, tibialength, 
                                                                         origin, 
                                                                         pt['backdown'], pt['backup'], 
                                                                         nbrstepslift))  # Move up
 
-            self.limbspathangles[index].extend(ik.getjointanglesforpath(coxalength, femurlength, tibialength, 
+            self.limbspathangles[index].extend(ik.generatelinearpath(coxalength, femurlength, tibialength, 
                                                                         origin, 
                                                                         pt['backup'], pt['forwup'], 
                                                                         nbrstepsforward))  # Swing forward
 
-            self.limbspathangles[index].extend(ik.getjointanglesforpath(coxalength, femurlength, tibialength, 
+            self.limbspathangles[index].extend(ik.generatelinearpath(coxalength, femurlength, tibialength, 
                                                                         origin, 
                                                                         pt['forwup'], pt['forwdown'], 
                                                                         nbrstepslift))  # Move down
 
-            self.limbspathangles[index].extend(ik.getjointanglesforpath(coxalength, femurlength, tibialength, 
+            self.limbspathangles[index].extend(ik.generatelinearpath(coxalength, femurlength, tibialength, 
                                                                         origin, 
                                                                         pt['forwdown'], pt['backdown'], 
                                                                         nbrstepsstance))  # Stance back
@@ -395,25 +483,39 @@ class HexEngine(object):
 
         return False
 
-    def positionmembersforgaitstart(self):
+    def repositionmembersforgaitstart(self, liftheight):
+        """ Lifts a predefined height and repositions each member individually for the gait starting positions """
+
         for limbindex, patharray in self.limbspathangles.items():
-            self.movelimbs([limbindex], [0,0,20])
-            (coxaangle, femurangle, tibiaangle)=patharray[0]
-            self.hexmodel.limbs[limbindex].setjoints(coxaangle, femurangle, tibiaangle)
+            (jointsangles, endposition)=patharray[0]
+            (coxaangle, femurangle, tibiaangle)=jointsangles
+            limb=self.hexmodel.limbs[limbindex]
+            p0=limb.getposition()
+            p2=endposition
+
+            p1=list(self.midpoint(p0, p2))
+           
+            p1[2]+=liftheight
+            #pdb.set_trace()
+            self.quadraticmove(limb, p1, p2)
 
     def startgait(self):
         """Starts the loaded gait and interrupts on Ctrl-C"""
-        if not patharraysloaded():
+        if not self.patharraysloaded():
             print 'Cannot initiate gait start: Paths not loaded!'
             return False
 
+        print('Respositioning limbs for gait start ')
+        self.repositionmembersforgaitstart(30)
+        print('Limbs repositioned. Starting gait. ')
+        time.sleep(0.5)
         try:
             while True:
                 self.updategait()
                 #time.sleep(0.01)
 
         except KeyboardInterrupt:
-            pass
+            pass            
 
         # TODO: finally: reposiciona as patas na posicao inicial
 
@@ -422,7 +524,6 @@ class HexEngine(object):
     def startmarch(self):
         """Starts looped march test in the same spot"""
 
-        # TODO: Será necessário um delay entre moveLimbsTipsTo() ??
         try:
             while True:
                 m.moveLimbsTipTo([1, 2, 3, 4, 5, 6], [80, -42])
@@ -439,6 +540,17 @@ class HexEngine(object):
             pass
 
         return True
+
+    def poweron(self):
+        if not self.powered:
+            self.standup()
+            print('Hexmodel: POWER ON')
+
+    def poweroff(self):
+        if self.powered:
+            for limbindex, limb in  self.hexmodel.limbs.items():
+                limb.poweroff()
+            print('Hexmodel: POWER OFF')
 
     def printpaths(self):
         
