@@ -11,9 +11,9 @@ class HexBone(Servo):
         
         #Setting limb's lengths
         self.length=length
-        #Positions Limb in Starting Position
-        if not self.setangle(startangle):
-            sys.exit('Error initializing servo on channel #%s. Unable to set startAngle' % channel)
+        #Positions Limb in Starting Position: NOOOT
+        #if not self.setangle(startangle):
+        #    sys.exit('Error initializing servo on channel #%s. Unable to set startAngle' % channel)
         
 
     def getLength(self):
