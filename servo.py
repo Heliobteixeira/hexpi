@@ -7,6 +7,7 @@ from Adafruit_PWM_Servo_Driver import PWM
 class Servo(object):
     def __init__(self, i2caddress, channel, pwm_min, pwm_max, reversed=False, offset=0, minangle=-90, maxangle=90,
                  callback=None):
+        # TODO: memorize max and min positions and set functions reaching it
         self.i2caddress = i2caddress
         self._pwm = PWM(self.i2caddress, debug=False)  # Set debug to False before release
 
@@ -22,6 +23,9 @@ class Servo(object):
         self.offset = offset
         self.reversed = reversed
         self.callback = callback
+
+        self.powered = None
+        self.poweroff()
 
         if maxangle - minangle > self.anglethrow:
             sys.exit('Result of maxAngle-minAngle exceeds predefined servo throw of %s' % self.anglethrow)
@@ -67,6 +71,7 @@ class Servo(object):
     def _setpwm(self, value):
         self._pwm.setPWM(self.channel, 0, value)
         self._actualpwm = value
+        self.powered = True
         # print('PWM set to: %s' % value)
 
     def _convangletopwm(self, angle):
@@ -186,9 +191,11 @@ class Servo(object):
 
     def poweroff(self):
         self._setpwm(0)
+        self.powered = False
 
     def poweron(self):
         self.setangle(self.angle)
+        self.powered = True
 
     def refresh(self):
         return self.setangle(self.angle)
